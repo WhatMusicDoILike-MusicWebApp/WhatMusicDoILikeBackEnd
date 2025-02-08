@@ -9,7 +9,8 @@ def create_app():
     db.init_app(app)  
 
     with app.app_context():
-        db.create_all()  
+        db.drop_all()   # Drop all tables
+        db.create_all()  # Create all tables based on your models
 
     from app.routes.user_routes import user_bp
     app.register_blueprint(user_bp)

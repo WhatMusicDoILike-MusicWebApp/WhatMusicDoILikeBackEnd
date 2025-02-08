@@ -20,7 +20,7 @@ def new_user():
         db.session.add(new_user)  # Add to session
         db.session.commit()  # Commit transaction
 
-        return jsonify({"message": "User created successfully!", "userId": new_user.id}), 201
+        return jsonify({"message": "User created successfully!", "userId": new_user.userId}), 201
     except Exception as e:
         db.session.rollback()  # Rollback in case of error
         return jsonify({"error": str(e)}), 500
