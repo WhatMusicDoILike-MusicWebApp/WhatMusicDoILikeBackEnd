@@ -6,5 +6,8 @@ class User(db.Model):
     userId = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(255), nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False)
+    spotifyId = db.Column(db.String(255), unique=True, nullable=False)
+    youtubeId = db.Column(db.String(255), unique=True, nullable=False)
+    appleMusicId = db.Column(db.String(255), unique=True, nullable=False)
     
     playlists = db.relationship('Playlist', back_populates='user')
