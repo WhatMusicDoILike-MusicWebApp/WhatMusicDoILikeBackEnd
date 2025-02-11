@@ -15,7 +15,4 @@ def create_app():
     from app.routes.user_routes import user_bp
     app.register_blueprint(user_bp)
 
-    # from app.routes.playlist_routes import playlist_bp
-    # app.register_blueprint(playlist_bp)
-
     return app

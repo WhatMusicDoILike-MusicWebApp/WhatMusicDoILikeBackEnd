@@ -88,6 +88,7 @@ def update_user():
         user.name = new_name
         db.session.commit()
         return jsonify({
+            "message": "User updated successfully!",
             "userId": user.userId,
             "name": user.name,
             "email": user.email
