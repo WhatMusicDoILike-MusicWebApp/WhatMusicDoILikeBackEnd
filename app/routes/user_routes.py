@@ -1,3 +1,5 @@
+from app.models.playlist import Playlist
+from app.models.playlist_has import PlaylistHas
 from flask import Blueprint, jsonify, request
 from app.models.database import db
 from app.models.user import User
@@ -58,18 +60,26 @@ def delete_user():
         return jsonify({"error": "User not found"}), 404
 
     try:
-        # Delete related records in PlaylistHas and Playlist
-        # PlaylistHas.query.filter_by(userId=user_id).delete()
-        # Playlist.query.filter_by(userId=user_id).delete()
+        # Fetch all playlist IDs owned by the user
+        playlists = Playlist.query.filter_by(playlistOwnerId=user_id).all()
+        playlist_ids = [playlist.playlistId for playlist in playlists]
+
+        if playlist_ids:
+            # Delete all PlaylistHas entries related to the playlists
+            PlaylistHas.query.filter(PlaylistHas.playlistId.in_(playlist_ids)).delete(synchronize_session=False)
+
+            # Delete all Playlists owned by the user
+            Playlist.query.filter(Playlist.playlistId.in_(playlist_ids)).delete(synchronize_session=False)
 
         # Delete user from Users table
         db.session.delete(user)
         db.session.commit()
 
-        return jsonify({"Message": "User Successfully Deleted"}), 200
+        return jsonify({"message": "User Successfully Deleted"}), 200
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
 
 @user_bp.route('/users', methods=['PUT'])
 def update_user():
