@@ -13,7 +13,7 @@ user_bp = Blueprint('user_bp', __name__)
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-client = OpenAI() 
+client = OpenAI(api_key=OPENAI_API_KEY) 
 
 
 @user_bp.route('/users', methods=['POST'])
@@ -152,8 +152,6 @@ def fetch_recommendations():
         "\n\nProvide the recommendations in JSON format with fields: 'title' and 'artist'."
     )
 
-    prompt = f"Generate music recommendations based on these songs:\n{song_text}"
-
     try:
         response = client.chat.completions.create(
             model="gpt-4",
@@ -196,7 +194,7 @@ def fetch_genres():
     song_text = "\n".join([f"{title} by {artist}" for title, artist in songs])
 
     prompt = (
-        "Based on the following list of songs, give me my top 5 genre.\n\n" +
+        "Based on the following list of songs, give me my top 5 genres.\n\n" +
         song_text +
         "\n\nProvide the recommendations in JSON format with fields: 'Genre' and 'exaplaination for genre'."
     )
