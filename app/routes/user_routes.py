@@ -7,13 +7,13 @@ from flask import Blueprint, jsonify, request
 from app.models.database import db
 from app.models.song import Song
 from app.models.user import User
+from dotenv import load_dotenv
 
 user_bp = Blueprint('user_bp', __name__)
 
+load_dotenv()
 
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-client = OpenAI(api_key=OPENAI_API_KEY) 
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) 
 
 
 @user_bp.route('/users', methods=['POST'])
@@ -154,7 +154,7 @@ def fetch_recommendations():
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}]
         )
 
@@ -201,7 +201,7 @@ def fetch_genres():
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}]
         )
 
