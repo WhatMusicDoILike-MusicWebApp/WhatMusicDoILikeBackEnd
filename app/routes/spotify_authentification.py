@@ -8,6 +8,8 @@ import requests
 import urllib.parse
 import json
 
+from app.models import User, Playlist, Song, PlaylistHas
+
 CLIENT_ID = os.getenv("CLIENT_ID")
 CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 REDIRECT_URI = os.getenv("REDIRECT_URI")
@@ -16,12 +18,16 @@ AUTH_URL = os.getenv("AUTH_URL")
 TOKEN_URL = os.getenv("TOKEN_URL")
 API_BASE_URL = os.getenv("API_BASE_URL")
 
+playlist_map = {}
+user_credentials = {}
+
 spotify_auth_bp = Blueprint('spotify_auth', __name__)
 
 @spotify_auth_bp.route('/spotify/fetchData', methods=['POST'])
 def spotify_auth():
     print("Authorizing Spotify Account...")
     
+    global user_credentials 
     user_credentials = request.get_json()
     # Log in to spotify
     return login()
@@ -69,10 +75,6 @@ def callback():
         session['refresh_token'] = token_info['refresh_token']
         session['expires_at'] = datetime.now().timestamp() + token_info['expires_in']
 
-        print(f"Access token: {session['access_token']}   End")
-        print("\n")
-        print(f"Refresh token: {session['refresh_token']}   End")
-
         return get_playlists()
     
     return "Failure"
@@ -95,15 +97,10 @@ def get_playlists():
     playlist_ids = [playlist['id'] for playlist in playlists.get('items', [])]
     playlist_names = [playlist['name'] for playlist in playlists.get('items', [])]
 
-    playlist_map = {}
+    global playlist_map
     for id, names in zip(playlist_ids, playlist_names):
-        playlist_map[id] = names
+        playlist_map[(id, names)] = None
 
-    print(f"Playlist Dict:  {playlist_map}")
-
-    session['playlist_ids'] = playlist_ids
-
-    print("\n\nSUCCESS")
     return get_playlists_items()
 
 # get all tracks from all playlists
@@ -114,26 +111,81 @@ def get_playlists_items():
     if datetime.now().timestamp() > session['expires_at']:
         return redirect('/refresh-token')
     
-    if 'playlist_ids' not in session:
-        return "No playlist IDS found", 400
-    
     headers = {
         'Authorization': f"Bearer {session['access_token']}"
     }
 
-    playlist_ids = session['playlist_ids']
-    all_tracks = []
+    global playlist_map
     total_tracks = 0
-    for id in playlist_ids:
-        response = requests.get(API_BASE_URL + f'playlists/{id}/tracks?fields=items(track(name,artists(name)))', headers=headers)
-        tracks = response.json()
 
-        track_items = tracks.get('items', [])
-        all_tracks.append(track_items)
+    for (id,name) in playlist_map.keys():
+        offset = 0
+        all_tracks = []
+        while True:
+            response = requests.get(API_BASE_URL + f'playlists/{id}/tracks?offset={offset}&fields=items(track(name,artists(name)))', headers=headers)
+            tracks = response.json()
 
-        total_tracks += len(track_items)
+            track_items = tracks.get('items', [])
 
-    session['tracks'] = all_tracks
+            if not track_items:
+                break
 
-    print(total_tracks)
+            track_items = tracks.get('items', [])
+            all_tracks.append(track_items)
+
+            total_tracks += len(track_items)
+
+            offset += 100
+
+        playlist_map[(id,name)] = all_tracks
+
+    user = User.query.filter_by(userId=user_credentials['userId']).first()
+    if not user:
+        return "Error: User does not exist"
+    
+    for (id, name) in playlist_map:
+        track_names = []
+        # Add playlist to playlist table
+        new_playlist = Playlist(
+            playlistName=name,
+            userId=user_credentials['userId']
+        )
+
+        db.session.add(new_playlist)
+
+        data = playlist_map[(id, name)]
+        all_tracks = data[0]
+        for track_info in all_tracks:
+            track = track_info['track']
+            track_name = track['name']
+            track_names.append(track_name)
+
+            artists = [artist['name'] for artist in track['artists']]
+
+            new_track = Song(
+                trackName = track_name,
+                artist = ', '.join(artists)
+            )
+
+            db.session.add(new_track)
+        
+        db.session.commit()
+
+        playlist_id = db.session.query(Playlist.playlistId).filter_by(playlistName=name).first()
+        playlist_id = playlist_id[0]
+        for track in track_names:
+            track_id = db.session.query(Song.songId).filter_by(trackName=track).first()
+            track_id = track_id[0]
+
+            # CHECK FOR DUPLICATE
+            exists = db.session.query(PlaylistHas).filter_by(
+                playlistId=playlist_id, songId=track_id
+            ).first()
+
+            if not exists:
+                playlist_has = PlaylistHas(playlistId=playlist_id, songId=track_id)
+                db.session.add(playlist_has)
+                db.session.commit()
+
     return "Success"
+
