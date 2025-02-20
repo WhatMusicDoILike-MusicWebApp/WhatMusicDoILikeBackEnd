@@ -4,11 +4,16 @@ from app.models.playlist import Playlist
 from app.models.song import Song
 from app.models.user import User
 from flask import Flask
+from flask_cors import CORS
 from app.models.database import db
 
 def create_app():
     app = Flask(__name__)
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:777@localhost/postgres' #mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db
+
+    CORS(app, origins=["http://localhost:5173"])
+
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db' #mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)  
@@ -19,10 +24,10 @@ def create_app():
 
         # Dummy data
         dummy_users = [
-            User(name="Iker", email="Iker@example.com", spotifyId="sp_123", youtubeId="yt_123", appleMusicId="am_123"),
-            User(name="Maayan", email="Maayan@example.com"),
-            User(name="Caleb", email="Caleb@example.com:"),
-            User(name="Ethan", email="Ethan@exampel.com"),
+            User(userId= "1", name="Iker", email="Iker@example.com", spotifyId="sp_123", youtubeId="yt_123", appleMusicId="am_123"),
+            User(userId= "2", name="Maayan", email="Maayan@example.com"),
+            User(userId= "3", name="Caleb", email="Caleb@example.com:"),
+            User(userId= "4", name="Ethan", email="Ethan@exampel.com"),
 
             Playlist(playlistName="Iker's Playlist", playlistOwnerId=1),
             Playlist(playlistName="Maayan's Playlist", playlistOwnerId=2),

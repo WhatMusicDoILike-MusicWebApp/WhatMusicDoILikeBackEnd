@@ -14,17 +14,18 @@ def new_user():
     print("User route working!")
     data = request.get_json()  # Get JSON payload from request
 
+    user_id = data.get('userId')
     name = data.get('name')
     email = data.get('email')
     spotify_id = data.get('spotifyId', "")  # Provide default value
     youtube_id = data.get('youtubeId', "")
     apple_music_id = data.get('appleMusicId', "")
 
-    if not name or not email:
+    if not user_id or not name or not email:
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
-        new_user = User(name=name, email=email, spotifyId=spotify_id, youtubeId=youtube_id, appleMusicId=apple_music_id)
+        new_user = User(userId=user_id, name=name, email=email, spotifyId=spotify_id, youtubeId=youtube_id, appleMusicId=apple_music_id)
         db.session.add(new_user)  # Add to session
         db.session.commit()  # Commit transaction
 
