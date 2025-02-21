@@ -12,17 +12,15 @@ def create_app():
 
     CORS(app, origins=["http://localhost:5173"])
 
-
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db' #mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)  
 
     with app.app_context():
-        db.drop_all()   # Drop all tables
-        db.create_all()  # Create all tables based on your models
+        db.drop_all()   
+        db.create_all()  
 
-        # Dummy data
         dummy_users = [
             User(userId= "1", name="Iker", email="Iker@example.com", spotifyId="sp_123", youtubeId="yt_123", appleMusicId="am_123"),
             User(userId= "2", name="Maayan", email="Maayan@example.com"),
@@ -57,7 +55,7 @@ def create_app():
         ]
 
         db.session.add_all(dummy_users)
-        db.session.commit()  # Save dummy data to the database
+        db.session.commit()  
 
     from app.routes.user_routes import user_bp
     app.register_blueprint(user_bp)

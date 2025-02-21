@@ -16,7 +16,7 @@ client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 @gpt_bp.route('/fetchRecommendations', methods=['GET'])
 def fetch_recommendations():
-    data = request.get_json()  # Get JSON payload from request
+    data = request.get_json() 
     user_id = data.get('userId')
 
     if not user_id:
@@ -63,7 +63,7 @@ def fetch_recommendations():
     
 @gpt_bp.route('/fetchGenres', methods=['GET'])
 def fetch_genres():
-    data = request.get_json()  # Get JSON payload from request
+    data = request.get_json()  
     user_id = data.get('userId')
 
     if not user_id:
