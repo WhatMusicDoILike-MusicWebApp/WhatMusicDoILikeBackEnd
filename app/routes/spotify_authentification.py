@@ -23,8 +23,8 @@ user_credentials = {}
 
 spotify_auth_bp = Blueprint('spotify_auth_bp', __name__)
 
-@spotify_auth_bp.route('/spotify/fetchData', methods=['POST', 'GET'])
-def callback():
+@spotify_auth_bp.route('/spotify/fetchUserData', methods=['POST', 'GET'])
+def fetch_user_spotify_data():
 
     global user_credentials 
     user_credentials = request.get_json()
@@ -36,21 +36,8 @@ def callback():
         return jsonify({"error": request.get_json()['error']})
 
     if 'code' in request.get_json():
-        req_body = {
-            'code': request.get_json()['code'],
-            'grant_type': 'authorization_code',
-            'redirect_uri': REDIRECT_URI,
-            'client_id': CLIENT_ID,
-            'client_secret': CLIENT_SECRET
-        }
 
-        response = requests.post(TOKEN_URL, data=req_body)
-        token_info = response.json()
-
-
-        session['access_token'] = token_info['access_token']
-        session['refresh_token'] = token_info['refresh_token']
-        session['expires_at'] = datetime.now().timestamp() + token_info['expires_in']
+        fetch_auth_token(request.get_json()['code'])
 
         return get_playlists()
     
@@ -115,7 +102,7 @@ def get_playlists_items():
 
             offset += 100
 
-        playlist_map[(id,name)] = all_tracks
+        playlist_map[(id,name)] = (len(all_tracks), all_tracks)
 
     user = User.query.filter_by(userId=user_credentials['userId']).first()
     if not user:
@@ -135,6 +122,7 @@ def get_playlists_items():
 
         if data == []:
             print("Empty Playlist")
+            playlist_map[(id,name)] = (0, [])
             continue
 
         all_tracks = data[0]
@@ -170,8 +158,24 @@ def get_playlists_items():
                 db.session.add(playlist_has)
                 db.session.commit()
 
+    return playlist_map
 
-        print("completed")
+def fetch_auth_token(code):
+    req_body = {
+        'code': code,
+        'grant_type': 'authorization_code',
+        'redirect_uri': REDIRECT_URI,
+        'client_id': CLIENT_ID,
+        'client_secret': CLIENT_SECRET
+    }
+
+    response = requests.post(TOKEN_URL, data=req_body)
+    token_info = response.json()
+
+
+    session['access_token'] = token_info['access_token']
+    session['refresh_token'] = token_info['refresh_token']
+    session['expires_at'] = datetime.now().timestamp() + token_info['expires_in']
 
     return "Success"
 
