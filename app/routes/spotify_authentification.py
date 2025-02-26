@@ -118,7 +118,7 @@ def get_playlists_items():
 
         db.session.add(new_playlist)
 
-        data = playlist_map[(id, name)]
+        data = playlist_map[(id, name)][1]
 
         if data == []:
             print("Empty Playlist")
