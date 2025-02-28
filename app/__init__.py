@@ -57,7 +57,9 @@ def create_app():
         db.session.add_all(dummy_users)
         db.session.commit()  
 
-    from app.routes.user_routes import user_bp
+    from app.routes import user_bp, gpt_bp, spotify_auth_bp
+    app.register_blueprint(gpt_bp)
+    app.register_blueprint(spotify_auth_bp)
     app.register_blueprint(user_bp)
 
     def cleanup():

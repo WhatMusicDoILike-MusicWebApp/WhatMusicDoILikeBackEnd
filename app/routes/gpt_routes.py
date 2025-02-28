@@ -8,10 +8,9 @@ from app.models.database import db
 from app.models.song import Song
 from dotenv import load_dotenv
 
-gpt_bp = Blueprint('user_bp', __name__)
+gpt_bp = Blueprint('gpt_bp', __name__)
 
 load_dotenv()
-
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) 
 
 @gpt_bp.route('/fetchRecommendations', methods=['GET'])
