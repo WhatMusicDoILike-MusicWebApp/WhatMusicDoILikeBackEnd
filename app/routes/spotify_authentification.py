@@ -6,6 +6,7 @@ import base64
 from dotenv import load_dotenv
 import os
 import time
+from urllib.parse import urlencode
 
 load_dotenv('.env')
 CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
@@ -47,6 +48,8 @@ def fetch_spotify_user_data():
             print(f"Auth token fetch exception on attempt {attempt + 1}: {e}")
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_DELAY)
+            if attempt == MAX_RETRIES - 1:
+                return jsonify({"error": "Failed to obtain authentication token after multiple attempts"})
     
     if 'error' in token_info or 'access_token' not in token_info:
         return jsonify({"error": token_info.get('error', 'Failed to obtain authentication token')})
@@ -66,6 +69,8 @@ def fetch_spotify_user_data():
             print(f"Playlists fetch exception on attempt {attempt + 1}: {e}")
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_DELAY)
+            if attempt == MAX_RETRIES - 1:
+                return jsonify({"error": "Failed to fetch playlists after multiple attempts"})
     
     if not playlists:
         return jsonify({"error": "Failed to fetch playlists after multiple attempts"})
@@ -83,6 +88,8 @@ def fetch_spotify_user_data():
             print(f"Database storage exception on attempt {attempt + 1}: {e}")
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_DELAY)
+            if attempt == MAX_RETRIES - 1:
+                return jsonify({"error": "Failed to store songs in database after multiple attempts"})
     
     if db_response:
         return jsonify(playlists)
@@ -109,7 +116,7 @@ def fetch_auth_token(code):
     }
 
     try:
-        response = requests.post(TOKEN_URL, data=req_body, headers=headers)
+        response = requests.post(TOKEN_URL, data=urlencode(req_body), headers=headers)
         return response.json()
     except Exception as e:
         return {"error": str(e)}
@@ -140,6 +147,11 @@ def fetch_playlists(token):
             for attempt in range(MAX_RETRIES):
                 try:
                     songs = fetch_songs(token, playlist_id)
+
+                    if 'lengthOfPlaylist' in songs:
+                        print(f"Skipping empty playlist {playlist_name}")
+                        break
+
                     if songs:
                         break
                         
@@ -151,12 +163,13 @@ def fetch_playlists(token):
                     if attempt < MAX_RETRIES - 1:
                         time.sleep(RETRY_DELAY)
             
-            processed_playlists.append({
-                'id': playlist_id,
-                'name': playlist_name,
-                'size': len(songs),
-                'songs': songs
-            })
+            if 'lengthOfPlaylist' not in songs:
+                processed_playlists.append({
+                    'id': playlist_id,
+                    'name': playlist_name,
+                    'size': len(songs),
+                    'songs': songs
+                })
             
         return processed_playlists
     except Exception as e:
@@ -185,6 +198,8 @@ def fetch_songs(token, playlist_id):
                     )
                     
                     tracks_data = response.json()
+                    if 'total' in tracks_data and tracks_data['total'] == 0:
+                        return {"lengthOfPlaylist": 0}
                     
                     if 'error' in tracks_data:
                         print(f"Spotify API error fetching tracks: {tracks_data['error']}")
