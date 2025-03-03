@@ -16,6 +16,8 @@ load_dotenv('.env')
 YT_CLIENT_ID = os.getenv("YT_CLIENT")
 YT_SECRET = os.getenv("YT_SECRET")
 
+youtube_auth_bp = Blueprint('youtube_auth_bp', __name__)
+
 def patched_prompt_for_token(               #patched ytmusic oauth method for automated authnetication 
     cls, credentials: Credentials, open_browser: bool = False, to_file: Optional[str] = None
 ) -> "RefreshingToken":
@@ -50,23 +52,25 @@ def patched_prompt_for_token(               #patched ytmusic oauth method for au
 
 RefreshingToken.prompt_for_token = classmethod(patched_prompt_for_token)
 
-youtube_auth_bp = Blueprint('youtube_auth_bp', __name__)
 
 
 @youtube_auth_bp.route("/youtube/yt_login")
 def yt_login():
-    setup_oauth(
+    token = setup_oauth(
         client_id=YT_CLIENT_ID,
         client_secret=YT_SECRET,
-        open_browser=True  # False if running on a server
+        open_browser=True  
     )
+
+    if token:
+        session["oauth_token"] = token  
+        session.modified = True  
+
     return redirect("/youtube/yt_playlists")
 
 @youtube_auth_bp.route("/youtube/yt_playlists")
 def get_playlists():
     """Fetches playlists from the authenticated YouTube Music account."""
-    # if not os.path.exists(TOKEN_FILE):
-    #     return jsonify({"error": "User not authenticated. Please log in first."}), 401
 
     del session["oauth_token"]['_local_cache']   #for some reason dupliates for local_cache and credentials
     del session["oauth_token"]['credentials']
