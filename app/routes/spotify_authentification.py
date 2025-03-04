@@ -92,7 +92,10 @@ def fetch_spotify_user_data():
                 return jsonify({"error": "Failed to store songs in database after multiple attempts"})
     
     if db_response:
-        return jsonify(playlists)
+        return jsonify({
+            "userId": clerk_unique_id,
+            "playlists": [{"playlistName": playlist['name'], "tracks": playlist['songs']} for playlist in playlists]
+        })
     else:
         return jsonify({"error": "Error storing songs in database after multiple attempts"})
 
