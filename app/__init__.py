@@ -6,15 +6,21 @@ from app.models.user import User
 from flask import Flask
 from flask_cors import CORS
 from app.models.database import db
+import os
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 def create_app():
     app = Flask(__name__)
 
     CORS(app, origins=["http://localhost:5173"])
+    app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db' #mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:777@localhost/postgres' #mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db #'postgresql://postgres:777@localhost/postgres'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
+    
     db.init_app(app)  
 
     with app.app_context():
@@ -57,10 +63,11 @@ def create_app():
         db.session.add_all(dummy_users)
         db.session.commit()  
 
-    from app.routes import user_bp, gpt_bp, spotify_auth_bp
+    from app.routes import user_bp, gpt_bp, spotify_auth_bp, youtube_auth_bp
     app.register_blueprint(gpt_bp)
     app.register_blueprint(spotify_auth_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(youtube_auth_bp)
 
     def cleanup():
         with app.app_context():
