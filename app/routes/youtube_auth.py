@@ -8,6 +8,8 @@ import webbrowser
 from typing import Optional
 from pathlib import Path
 from dotenv import load_dotenv
+import platform
+import pyautogui
 
 
 load_dotenv('.env')
@@ -44,17 +46,24 @@ def patched_prompt_for_token(               #patched ytmusic oauth method for au
                 ref_token.update(ref_token.as_dict())
                 if to_file:
                     ref_token.local_cache = Path(to_file)
+                time.sleep(0.5)  # Small delay before closing tab
+                if platform.system() == "Darwin":  # macOS
+                    pyautogui.hotkey("command", "w")
+                else:  # Windows/Linux
+                    pyautogui.hotkey("ctrl", "w")
+
+                print("Authentication successful. Tab closed.")
                 return ref_token
         except Exception as e:
             print(f"Waiting for authentication... ({str(e)})")
         
-        time.sleep(5)  # Wait before retrying
+        time.sleep(0.5)  # Wait before retrying
 
 RefreshingToken.prompt_for_token = classmethod(patched_prompt_for_token)
 
 
 
-@youtube_auth_bp.route("/youtube/yt_login")
+@youtube_auth_bp.route("/youtube/yt_auth", methods=['POST'])
 def yt_login():
     token = setup_oauth(
         client_id=YT_CLIENT_ID,
@@ -66,16 +75,7 @@ def yt_login():
         session["oauth_token"] = token  
         session.modified = True  
 
-    return redirect("/youtube/yt_playlists")
-
-@youtube_auth_bp.route("/youtube/yt_playlists")
-def get_playlists():
-    """Fetches playlists from the authenticated YouTube Music account."""
-
-    del session["oauth_token"]['_local_cache']   #for some reason dupliates for local_cache and credentials
-    del session["oauth_token"]['credentials']
-
-
-    ytmusic = YTMusic(session["oauth_token"], oauth_credentials=OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET))  # Initialize with stored token
+        
+    ytmusic = YTMusic(session["oauth_token"].as_dict(), oauth_credentials=OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET))  # Initialize with stored token
     playlists = ytmusic.get_library_playlists(limit=10)  # Fetch user's playlists
     return jsonify(playlists)
