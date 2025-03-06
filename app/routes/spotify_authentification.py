@@ -17,7 +17,61 @@ RETRY_DELAY = 1
 
 spotify_auth_bp = Blueprint('spotify_auth_bp', __name__)
 
-@spotify_auth_bp.route('/spotify/fetchUserData', methods=['POST'])
+@spotify_auth_bp.route('/spotify/initializeConnection', methods=['POST'])
+def initialize_spotify_connection():
+    """Initializes the Spotify connection for the user"""
+    request_data = request.get_json()
+    print(request_data)
+
+    if 'code' not in request_data:
+        return jsonify({"error": "No authorization code provided"})
+    
+    if 'userId' not in request_data:
+        return jsonify({"error": "No user ID provided"})
+    
+    user_id = request_data['userId']
+    
+    user = User.query.filter_by(userId=user_id).first()
+    if not user:
+        return jsonify({"error": "User not found"})
+    
+    if user.spotifyAuthToken:
+        return jsonify({"error": "User already has a Spotify connection"})
+    
+    REDIRECT_URI = 'http://localhost:5173/dashboard'
+    AUTH_URL = 'https://accounts.spotify.com/api/token'
+    
+    query_params = {
+        'grant_type': 'authorization_code',
+        'code': request_data['code'],
+        'redirect_uri': REDIRECT_URI,
+    }
+
+    client_creds = f"{CLIENT_ID}:{CLIENT_SECRET}"
+    base64_creds = base64.b64encode(client_creds.encode()).decode()
+
+    headers = {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Authorization': f'Basic {base64_creds}'
+    }
+    
+    try:
+        response = requests.post(AUTH_URL, params=query_params, headers=headers)
+        if 'error' in response.json() or 'access_token' not in response.json():
+            return jsonify({"error": response.json()['error']})
+        user.spotifyAuthToken = response.json().get('access_token')
+        user.spotifyRefreshToken = response.json().get('refresh_token')
+        db.session.commit()
+        return jsonify({
+            "message": "Succesfuly connected spotify!",
+            "userId": user.userId,
+            "spotifyAuthToken": user.spotifyAuthToken,
+            "spotifyRefreshToken": user.spotifyRefreshToken,
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
+@spotify_auth_bp.route('/spotify/fetchUserData', methods=['GET'])
 def fetch_spotify_user_data():
     """Main function to fetch user's Spotify data following the pseudocode logic"""
     request_data = request.get_json()
@@ -26,37 +80,22 @@ def fetch_spotify_user_data():
     if 'error' in request_data:
         return jsonify({"error": request_data['error']})
     
-    if 'code' not in request_data:
-        return jsonify({"error": "No authorization code provided"})
+    if 'userId' not in request_data:
+        return jsonify({"error": "No user ID provided"})
     
-    code = request_data['code']
     clerk_unique_id = request_data['userId']
     print(clerk_unique_id)
+
+    user = User.query.filter_by(userId=clerk_unique_id).first()
+    if not user:
+        return jsonify({"error": "User not found"})
+    
+    if not user.spotifyAuthToken:
+        return jsonify({"error": "User does not have a Spotify connection"})
     
     for attempt in range(MAX_RETRIES):
         try:
-            token_info = fetch_auth_token(code)
-            print(f"Auth token attempt {attempt + 1}: {token_info}")
-            
-            if 'error' not in token_info and 'access_token' in token_info:
-                break
-            
-            if attempt < MAX_RETRIES - 1:
-                print(f"Auth token fetch failed, retrying in {RETRY_DELAY} seconds...")
-                time.sleep(RETRY_DELAY)
-        except Exception as e:
-            print(f"Auth token fetch exception on attempt {attempt + 1}: {e}")
-            if attempt < MAX_RETRIES - 1:
-                time.sleep(RETRY_DELAY)
-            if attempt == MAX_RETRIES - 1:
-                return jsonify({"error": "Failed to obtain authentication token after multiple attempts"})
-    
-    if 'error' in token_info or 'access_token' not in token_info:
-        return jsonify({"error": token_info.get('error', 'Failed to obtain authentication token')})
-    
-    for attempt in range(MAX_RETRIES):
-        try:
-            playlists = fetch_playlists(token_info['access_token'])
+            playlists = fetch_playlists(user.userId)
             print(f"Playlists fetch attempt {attempt + 1}, got {len(playlists)} playlists")
             
             if playlists:
@@ -98,47 +137,61 @@ def fetch_spotify_user_data():
         })
     else:
         return jsonify({"error": "Error storing songs in database after multiple attempts"})
+    
 
-def fetch_auth_token(code):
-    """Fetch authentication token from Spotify API"""
-    REDIRECT_URI = 'http://localhost:5173/dashboard'
-    TOKEN_URL = 'https://accounts.spotify.com/api/token'
-
-    req_body = {
-        'code': code,
-        'grant_type': 'authorization_code',
-        'redirect_uri': REDIRECT_URI,
+def refresh_spotify_token(user_id):
+    """Refresh the user's Spotify token"""
+    user = User.query.filter_by(userId=user_id).first()
+    if not user:
+        return False
+    
+    query_params = {
+        'grant_type': 'refresh_token',
+        'refresh_token': user.spotifyRefreshToken
     }
-
-    client_creds = f"{CLIENT_ID}:{CLIENT_SECRET}"
-    base64_creds = base64.b64encode(client_creds.encode()).decode()
 
     headers = {
         'Content-Type': 'application/x-www-form-urlencoded',
-        'Authorization': f'Basic {base64_creds}'
     }
 
     try:
-        response = requests.post(TOKEN_URL, data=urlencode(req_body), headers=headers)
-        return response.json()
-    except Exception as e:
-        return {"error": str(e)}
+        AUTH_URL = 'https://accounts.spotify.com/api/token'
 
-def fetch_playlists(token):
+        response = requests.post(AUTH_URL, params=query_params, headers=headers)
+
+        if 'error' in response.json() or 'access_token' not in response.json():
+            print(f"Error refreshing token: {response.json()}")
+            raise Exception("Error refreshing token")
+
+        user.spotifyAuthToken = response.json().get('access_token')
+        user.spotifyRefreshToken = response.json().get('refresh_token')
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"refresh token error: {e}")
+        return False
+    
+    
+
+def fetch_playlists(user_id):
     """Fetch all playlists for the user"""
-    API_BASE_URL = 'https://api.spotify.com/v1/'
+    API_BASE_URL = 'https://api.spotify.com/v1/me/playlists'
+
+    token = User.query.filter_by(userId=user_id).first().spotifyAuthToken
 
     headers = {
         'Authorization': f"Bearer {token}"
     }
 
     try:
-        response = requests.get(API_BASE_URL + 'me/playlists', headers=headers)
+        response = requests.get(API_BASE_URL, headers=headers)
         playlists_data = response.json()
         
         if 'error' in playlists_data:
             print(f"Spotify API error: {playlists_data['error']}")
-            return []
+            refresh_spotify_token(user_id)
+            raise Exception("updating auth token and retrying...")
         
         processed_playlists = []
         
@@ -195,9 +248,14 @@ def fetch_songs(token, playlist_id):
             track_items = []
             for attempt in range(MAX_RETRIES):
                 try:
+                    query_params = {
+                        'offset': offset,
+                        'fields': 'items(track(name,artists(name))),total'
+                    }
                     response = requests.get(
-                        f"{API_BASE_URL}playlists/{playlist_id}/tracks?offset={offset}&fields=items(track(name,artists(name))),total",
-                        headers=headers
+                        f"{API_BASE_URL}playlists/{playlist_id}/tracks",
+                        headers=headers,
+                        params=query_params
                     )
                     
                     tracks_data = response.json()

@@ -22,10 +22,11 @@ def create_app():
         db.create_all()  
 
         dummy_users = [
-            User(userId= "1", name="Iker", email="Iker@example.com", spotifyId="sp_123", youtubeId="yt_123", appleMusicId="am_123"),
+            User(userId= "1", name="Iker", email="Iker@example.com"),
             User(userId= "2", name="Maayan", email="Maayan@example.com"),
             User(userId= "3", name="Caleb", email="Caleb@example.com:"),
             User(userId= "4", name="Ethan", email="Ethan@exampel.com"),
+            User(userId= "user_2trNFZ2SND2DwViOf1fS5PCkvQf", name="Maayan Israel", email="datcubingkid@gmail.com", ),
 
             Playlist(playlistName="Iker's Playlist", playlistOwnerId=1),
             Playlist(playlistName="Maayan's Playlist", playlistOwnerId=2),
