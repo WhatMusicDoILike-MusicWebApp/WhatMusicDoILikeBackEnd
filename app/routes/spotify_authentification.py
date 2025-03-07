@@ -74,19 +74,13 @@ def initialize_spotify_connection():
 @spotify_auth_bp.route('/spotify/fetchUserData', methods=['GET'])
 def fetch_spotify_user_data():
     """Main function to fetch user's Spotify data following the pseudocode logic"""
-    request_data = request.get_json()
-    print(request_data)
+    user_id = request.args.get('userId')
+    print(user_id)
     
-    if 'error' in request_data:
-        return jsonify({"error": request_data['error']})
-    
-    if 'userId' not in request_data:
+    if not user_id:
         return jsonify({"error": "No user ID provided"})
-    
-    clerk_unique_id = request_data['userId']
-    print(clerk_unique_id)
 
-    user = User.query.filter_by(userId=clerk_unique_id).first()
+    user = User.query.filter_by(userId=user_id).first()
     if not user:
         return jsonify({"error": "User not found"})
     
@@ -116,7 +110,7 @@ def fetch_spotify_user_data():
     
     for attempt in range(MAX_RETRIES):
         try:
-            db_response = store_spotify_songs_in_database(playlists, clerk_unique_id)
+            db_response = store_spotify_songs_in_database(playlists, user_id)
             if db_response:
                 break
                 
@@ -132,7 +126,7 @@ def fetch_spotify_user_data():
     
     if db_response:
         return jsonify({
-            "userId": clerk_unique_id,
+            "userId": user_id,
             "playlists": [{"playlistName": playlist['name'], "tracks": playlist['songs']} for playlist in playlists]
         })
     else:
