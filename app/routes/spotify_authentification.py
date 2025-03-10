@@ -165,8 +165,6 @@ def refresh_spotify_token(user_id):
         db.session.rollback()
         print(f"refresh token error: {e}")
         return False
-    
-    
 
 def fetch_playlists(user_id):
     """Fetch all playlists for the user"""
@@ -295,9 +293,32 @@ def fetch_songs(token, playlist_id):
         print(f"Error fetching songs for playlist {playlist_id}: {e}")
         return []
 
+def delete_stored_spotify_data(user_id):
+    """Delete all stored Spotify data for the user"""
+    try:
+        user = User.query.filter_by(userId=user_id).first()
+        if not user:
+            print(f"User with ID {user_id} does not exist")
+            return False
+        
+        playlists = Playlist.query.filter_by(playlistOwnerId=user_id).all()
+        for playlist in playlists:
+            PlaylistHas.query.filter_by(playlistId=playlist.playlistId).delete()
+        
+        Playlist.query.filter_by(playlistOwnerId=user_id).delete()
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()
+        print(f"Database error: {e}")
+        return False
+
 def store_spotify_songs_in_database(playlists, user_id):
     """Store all playlists and songs in the database"""
     try:
+
+        delete_stored_spotify_data(user_id)
+
         print(f"Storing {len(playlists)} playlists for user {user_id}")
 
         user = User.query.filter_by(userId=user_id).first()
@@ -344,7 +365,7 @@ def store_spotify_songs_in_database(playlists, user_id):
                         songId=song_id
                     )
                     db.session.add(playlist_has)
-            
+        
         db.session.commit()
         return True
     
