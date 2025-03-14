@@ -3,7 +3,6 @@ from app.models.playlist_has import PlaylistHas
 from flask import Blueprint, jsonify, request
 from app.models.database import db
 from app.models.user import User
-from dotenv import load_dotenv
 
 user_bp = Blueprint('user_bp', __name__)
 

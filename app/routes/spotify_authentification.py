@@ -6,7 +6,6 @@ import base64
 from dotenv import load_dotenv
 import os
 import time
-from urllib.parse import urlencode
 
 load_dotenv('.env')
 CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
