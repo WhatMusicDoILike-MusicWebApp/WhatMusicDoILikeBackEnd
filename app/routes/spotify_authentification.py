@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify, request
 from app.models.database import db
-from app.models import User, Playlist, Song, PlaylistHas
+from app.models import User, Playlist, Track, PlaylistHas
 import requests
 import base64
 from dotenv import load_dotenv
@@ -20,7 +20,6 @@ spotify_auth_bp = Blueprint('spotify_auth_bp', __name__)
 def initialize_spotify_connection():
     """Initializes the Spotify connection for the user"""
     request_data = request.get_json()
-    print(request_data)
 
     if 'code' not in request_data:
         return jsonify({"error": "No authorization code provided"})
@@ -74,7 +73,6 @@ def initialize_spotify_connection():
 def fetch_spotify_user_data():
     """Main function to fetch user's Spotify data following the pseudocode logic"""
     user_id = request.args.get('userId')
-    print(user_id)
     
     if not user_id:
         return jsonify({"error": "No user ID provided"})
@@ -126,7 +124,7 @@ def fetch_spotify_user_data():
     if db_response:
         return jsonify({
             "userId": user_id,
-            "playlists": [{"playlistName": playlist['name'], "tracks": playlist['songs']} for playlist in playlists]
+            "playlists": [{"playlistName": playlist['name'], "tracks": playlist['tracks'], "imageUrl": playlist['image_url']} for playlist in playlists]
         })
     else:
         return jsonify({"error": "Error storing songs in database after multiple attempts"})
@@ -149,7 +147,6 @@ def refresh_spotify_token(user_id):
 
     try:
         AUTH_URL = 'https://accounts.spotify.com/api/token'
-
         response = requests.post(AUTH_URL, params=query_params, headers=headers)
 
         if 'error' in response.json() or 'access_token' not in response.json():
@@ -189,33 +186,35 @@ def fetch_playlists(user_id):
         for playlist in playlists_data.get('items', []):
             playlist_id = playlist['id']
             playlist_name = playlist['name']
+            image_url = playlist['images'][0]['url']
             
-            songs = []
+            tracks = []
             for attempt in range(MAX_RETRIES):
                 try:
-                    songs = fetch_songs(token, playlist_id)
+                    tracks = fetch_tracks(token, playlist_id)
 
-                    if 'lengthOfPlaylist' in songs:
+                    if 'lengthOfPlaylist' in tracks:
                         print(f"Skipping empty playlist {playlist_name}")
                         break
 
-                    if songs:
+                    if tracks:
                         break
                         
                     if attempt < MAX_RETRIES - 1:
-                        print(f"Failed to fetch songs for playlist {playlist_name}, retrying...")
+                        print(f"Failed to fetch tracks for playlist {playlist_name}, retrying...")
                         time.sleep(RETRY_DELAY)
                 except Exception as e:
-                    print(f"Exception fetching songs for playlist {playlist_name} on attempt {attempt + 1}: {e}")
+                    print(f"Exception fetching tracks for playlist {playlist_name} on attempt {attempt + 1}: {e}")
                     if attempt < MAX_RETRIES - 1:
                         time.sleep(RETRY_DELAY)
             
-            if 'lengthOfPlaylist' not in songs:
+            if 'lengthOfPlaylist' not in tracks:
                 processed_playlists.append({
                     'id': playlist_id,
                     'name': playlist_name,
-                    'size': len(songs),
-                    'songs': songs
+                    'size': len(tracks),
+                    'image_url': image_url,
+                    'tracks': tracks
                 })
             
         return processed_playlists
@@ -223,7 +222,7 @@ def fetch_playlists(user_id):
         print(f"Error fetching playlists: {e}")
         return []
 
-def fetch_songs(token, playlist_id):
+def fetch_tracks(token, playlist_id):
     """Fetch all songs from a specific playlist"""
     API_BASE_URL = 'https://api.spotify.com/v1/'
 
@@ -241,7 +240,7 @@ def fetch_songs(token, playlist_id):
                 try:
                     query_params = {
                         'offset': offset,
-                        'fields': 'items(track(name,artists(name))),total'
+                        'fields': 'items(track(name,artists(name),album(images))),total'
                     }
                     response = requests.get(
                         f"{API_BASE_URL}playlists/{playlist_id}/tracks",
@@ -275,11 +274,13 @@ def fetch_songs(token, playlist_id):
                     track = track_info['track']
                     track_name = track['name']
                     artists = [artist['name'] for artist in track['artists']]
+                    track_image_url = track['album']['images'][0]['url']
                     
                     all_tracks.append({
                         'name': track_name,
                         'artists': artists,
-                        'artist_string': ', '.join(artists)
+                        'artist_string': ', '.join(artists),
+                        'imageUrl': track_image_url
                     })
             
             offset += 100
@@ -336,32 +337,33 @@ def store_spotify_songs_in_database(playlists, user_id):
             
             playlist_id = new_playlist.playlistId
             
-            for song in playlist['songs']:
-                existing_song = Song.query.filter_by(
-                    trackName=song['name'],
-                    artist=song['artist_string']
+            for track in playlist['tracks']:
+                existing_song = Track.query.filter_by(
+                    trackName=track['name'],
+                    artist=track['artist_string']
                 ).first()
                 
                 if existing_song:
-                    song_id = existing_song.songId
+                    track_id = existing_song.trackId
                 else:
-                    new_song = Song(
-                        trackName=song['name'],
-                        artist=song['artist_string']
+                    new_song = Track(
+                        trackName=track['name'],
+                        artist=track['artist_string'],
+                        imageUrl=track['imageUrl']
                     )
                     db.session.add(new_song)
                     db.session.flush()  # Get the ID without committing
-                    song_id = new_song.songId
+                    track_id = new_song.trackId
                 
                 exists = PlaylistHas.query.filter_by(
                     playlistId=playlist_id, 
-                    songId=song_id
+                    trackId=track_id
                 ).first()
                 
                 if not exists:
                     playlist_has = PlaylistHas(
                         playlistId=playlist_id, 
-                        songId=song_id
+                        trackId=track_id
                     )
                     db.session.add(playlist_has)
         
