@@ -1,7 +1,7 @@
 import atexit
 from app.models import PlaylistHas
 from app.models.playlist import Playlist
-from app.models.song import Song
+from app.models.track import Track
 from app.models.user import User
 from flask import Flask
 from flask_cors import CORS
@@ -33,35 +33,36 @@ def create_app():
             Playlist(playlistName="Caleb's Playlist", playlistOwnerId=3),
             Playlist(playlistName="Ethan's Playlist", playlistOwnerId=4),
 
-            Song(trackName="Billie Jean", artist="Michael Jackson"),
-            Song(trackName="Stayin' Alive", artist="Bee Gees"),
-            Song(trackName="Song 3", artist="Artist 3"),
-            Song(trackName="Song 4", artist="Artist 4"),
-            Song(trackName="You'll Never Walk Alone", artist="Gerry & The Pacemakers"),
-            Song(trackName="Hey Jude", artist="The Beatles"),
-            Song(trackName="Sunflower", artist="Post Malone, Swae Lee"),
+            Track(trackName="Billie Jean", artist="Michael Jackson"),
+            Track(trackName="Stayin' Alive", artist="Bee Gees"),
+            Track(trackName="Track 3", artist="Artist 3"),
+            Track(trackName="Track 4", artist="Artist 4"),
+            Track(trackName="You'll Never Walk Alone", artist="Gerry & The Pacemakers"),
+            Track(trackName="Hey Jude", artist="The Beatles"),
+            Track(trackName="Sunflower", artist="Post Malone, Swae Lee"),
 
 
-            PlaylistHas(playlistId=1, songId=1),
-            PlaylistHas(playlistId=1, songId=2),
-            PlaylistHas(playlistId=1, songId=5),
-            PlaylistHas(playlistId=1, songId=6),
-            PlaylistHas(playlistId=1, songId=7),
+            PlaylistHas(playlistId=1, trackId=1),
+            PlaylistHas(playlistId=1, trackId=2),
+            PlaylistHas(playlistId=1, trackId=5),
+            PlaylistHas(playlistId=1, trackId=6),
+            PlaylistHas(playlistId=1, trackId=7),
 
-            PlaylistHas(playlistId=2, songId=3),
-            PlaylistHas(playlistId=2, songId=1),
-            PlaylistHas(playlistId=3, songId=4),
-            PlaylistHas(playlistId=4, songId=2),
-            PlaylistHas(playlistId=4, songId=3)
+            PlaylistHas(playlistId=2, trackId=3),
+            PlaylistHas(playlistId=2, trackId=1),
+            PlaylistHas(playlistId=3, trackId=4),
+            PlaylistHas(playlistId=4, trackId=2),
+            PlaylistHas(playlistId=4, trackId=3)
         ]
 
         db.session.add_all(dummy_users)
         db.session.commit()  
 
-    from app.routes import user_bp, gpt_bp, spotify_auth_bp
+    from app.routes import user_bp, gpt_bp, spotify_auth_bp, playlist_bp
     app.register_blueprint(gpt_bp)
     app.register_blueprint(spotify_auth_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(playlist_bp)
 
     def cleanup():
         with app.app_context():
