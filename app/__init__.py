@@ -6,12 +6,14 @@ from app.models.user import User
 from flask import Flask
 from flask_cors import CORS
 from app.models.database import db
+from dotenv import load_dotenv
 import os
 
 def create_app():
     app = Flask(__name__)
     
-    dev_mode = os.getenv('DEVELOPEMENT_MODE')
+    load_dotenv('.env')
+    dev_mode = os.environ.get('DEVELOPEMENT_MODE')
 
     if dev_mode == 'True':
         CORS(app, origins=['http://localhost:5173'])
@@ -21,9 +23,9 @@ def create_app():
         dev_branch = 'https://www.dev.whatmusicdoilike.com'
         CORS(app, origins=[main_branch, dev_branch])
 
-        db_user = os.getenv('DB_USERNAME')
-        db_password = os.getenv('DB_PASSWORD')
-        db_endpoint = os.getenv('DB_ENDPOINT')
+        db_user = os.environ.get('DB_USERNAME')
+        db_password = os.environ.get('DB_PASSWORD')
+        db_endpoint = os.environ.get('DB_ENDPOINT')
         db_name = 'music_db'
 
         app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_password}@{db_endpoint}/{db_name}'
