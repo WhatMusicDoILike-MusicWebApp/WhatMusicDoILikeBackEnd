@@ -27,6 +27,7 @@ def create_app():
         db_name = 'music_db'
 
         app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_password}@{db_endpoint}/{db_name}'
+        print(app.config['SQLALCHEMY_DATABASE_URI'])
 
     db.init_app(app)  
 
