@@ -6,14 +6,27 @@ from app.models.user import User
 from flask import Flask
 from flask_cors import CORS
 from app.models.database import db
+import os
 
 def create_app():
     app = Flask(__name__)
+    
+    dev_mode = os.getenv('DEVELOPEMENT_MODE')
 
-    CORS(app, origins=["http://localhost:5173"])
+    if dev_mode == 'True':
+        CORS(app, origins=['http://localhost:5173'])
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db'
+    else:
+        main_branch = 'https://www.whatmusicdoilike.com'
+        dev_branch = 'https://www.dev.whatmusicdoilike.com'
+        CORS(app, origins=[main_branch, dev_branch])
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db' #mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+        db_user = os.getenv('DB_USERNAME')
+        db_password = os.getenv('DB_PASSWORD')
+        db_endpoint = os.getenv('DB_ENDPOINT')
+        db_name = 'music_db'
+
+        app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_password}@{db_endpoint}/{db_name}'
 
     db.init_app(app)  
 
@@ -21,41 +34,14 @@ def create_app():
         db.drop_all()   
         db.create_all()  
 
-        dummy_users = [
+        dummy_data = [
             User(userId= "1", name="Iker", email="Iker@example.com"),
-            User(userId= "2", name="Maayan", email="Maayan@example.com"),
-            User(userId= "3", name="Caleb", email="Caleb@example.com:"),
-            User(userId= "4", name="Ethan", email="Ethan@exampel.com"),
-            User(userId= "user_2trNFZ2SND2DwViOf1fS5PCkvQf", name="Maayan Israel", email="datcubingkid@gmail.com", ),
-
             Playlist(playlistName="Iker's Playlist", playlistOwnerId=1),
-            Playlist(playlistName="Maayan's Playlist", playlistOwnerId=2),
-            Playlist(playlistName="Caleb's Playlist", playlistOwnerId=3),
-            Playlist(playlistName="Ethan's Playlist", playlistOwnerId=4),
-
             Track(trackName="Billie Jean", artist="Michael Jackson"),
-            Track(trackName="Stayin' Alive", artist="Bee Gees"),
-            Track(trackName="Track 3", artist="Artist 3"),
-            Track(trackName="Track 4", artist="Artist 4"),
-            Track(trackName="You'll Never Walk Alone", artist="Gerry & The Pacemakers"),
-            Track(trackName="Hey Jude", artist="The Beatles"),
-            Track(trackName="Sunflower", artist="Post Malone, Swae Lee"),
-
-
             PlaylistHas(playlistId=1, trackId=1),
-            PlaylistHas(playlistId=1, trackId=2),
-            PlaylistHas(playlistId=1, trackId=5),
-            PlaylistHas(playlistId=1, trackId=6),
-            PlaylistHas(playlistId=1, trackId=7),
-
-            PlaylistHas(playlistId=2, trackId=3),
-            PlaylistHas(playlistId=2, trackId=1),
-            PlaylistHas(playlistId=3, trackId=4),
-            PlaylistHas(playlistId=4, trackId=2),
-            PlaylistHas(playlistId=4, trackId=3)
         ]
 
-        db.session.add_all(dummy_users)
+        db.session.add_all(dummy_data)
         db.session.commit()  
 
     from app.routes import user_bp, gpt_bp, spotify_auth_bp, playlist_bp
