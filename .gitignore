@@ -1,7 +1,6 @@
 *.py[cod]
 .pytest_cache
 
-# Packages
 *.egg
 *.egg-info
 dist
@@ -17,15 +16,12 @@ lib
 lib64
 __pycache__
 
-# Installer logs
 pip-log.txt
 
-# Unit test / coverage reports
 .coverage
 .tox
 nosetests.xml
 
-# Translations
 *.mo
 
 .venv
