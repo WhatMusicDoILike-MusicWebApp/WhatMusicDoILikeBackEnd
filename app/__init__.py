@@ -38,8 +38,8 @@ def create_app():
 
         dummy_data = [
             User(userId= "1", name="Iker", email="Iker@example.com"),
-            Playlist(playlistName="Iker's Playlist", playlistOwnerId=1),
-            Track(trackName="Billie Jean", artist="Michael Jackson"),
+            Playlist(playlistName="Iker's Playlist", playlistOwnerId=1, playlistUrl="https://google.com"),
+            Track(trackName="Billie Jean", artist="Michael Jackson", trackUrl="https://google.com"),
             PlaylistHas(playlistId=1, trackId=1),
         ]
 

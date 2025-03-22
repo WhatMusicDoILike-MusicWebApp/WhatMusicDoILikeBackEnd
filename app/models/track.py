@@ -7,5 +7,6 @@ class Track(db.Model):
     trackName = db.Column(db.String(255), nullable=False)
     artist = db.Column(db.String(255), nullable=False)
     imageUrl = db.Column(db.String(255), nullable=True)
+    trackUrl = db.Column(db.String(255), nullable=False)
     
     playlists = db.relationship('PlaylistHas', back_populates='track')

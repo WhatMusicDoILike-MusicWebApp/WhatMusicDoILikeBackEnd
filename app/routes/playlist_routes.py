@@ -29,10 +29,11 @@ def get_user_playlist():
             .filter(PlaylistHas.playlistId == playlist.playlistId)
             .all()
         )
-        track_data = [{"trackId": track.trackId, "name": track.trackName, "artist": track.artist, "imageUrl": track.imageUrl} for track in tracks]
+        track_data = [{"trackId": track.trackId, "name": track.trackName, "artist": track.artist, "imageUrl": track.imageUrl, "trackUrl": track.trackUrl} for track in tracks]
         playlists_data.append({
             "playlistId": playlist.playlistId,
             "playlistName": playlist.playlistName,
+            "playlistUrl": playlist.playlistUrl,
             "tracks": track_data
         })
 

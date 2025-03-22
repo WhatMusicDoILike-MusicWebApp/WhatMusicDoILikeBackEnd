@@ -124,7 +124,7 @@ def fetch_spotify_user_data():
     if db_response:
         return jsonify({
             "userId": user_id,
-            "playlists": [{"playlistName": playlist['name'], "tracks": playlist['tracks'], "imageUrl": playlist['image_url']} for playlist in playlists]
+            "playlists": [{"playlistName": playlist['name'], "tracks": playlist['tracks'], "imageUrl": playlist['imageUrl'], "url": playlist['url']} for playlist in playlists]
         })
     else:
         return jsonify({"error": "Error storing songs in database after multiple attempts"})
@@ -186,6 +186,7 @@ def fetch_playlists(user_id):
         for playlist in playlists_data.get('items', []):
             playlist_id = playlist['id']
             playlist_name = playlist['name']
+            playlist_url = playlist['external_urls']['spotify']
             image_url = playlist['images'][0]['url']
             
             tracks = []
@@ -213,7 +214,8 @@ def fetch_playlists(user_id):
                     'id': playlist_id,
                     'name': playlist_name,
                     'size': len(tracks),
-                    'image_url': image_url,
+                    'imageUrl': image_url,
+                    'url': playlist_url,
                     'tracks': tracks
                 })
             
@@ -240,7 +242,7 @@ def fetch_tracks(token, playlist_id):
                 try:
                     query_params = {
                         'offset': offset,
-                        'fields': 'items(track(name,artists(name),album(images))),total'
+                        'fields': 'items(track(name,external_urls,artists(name),album(images))),total'
                     }
                     response = requests.get(
                         f"{API_BASE_URL}playlists/{playlist_id}/tracks",
@@ -273,14 +275,15 @@ def fetch_tracks(token, playlist_id):
                 if 'track' in track_info and track_info['track']:
                     track = track_info['track']
                     track_name = track['name']
+                    track_url = track['external_urls']['spotify']
                     artists = [artist['name'] for artist in track['artists']]
                     track_image_url = track['album']['images'][0]['url']
                     
                     all_tracks.append({
                         'name': track_name,
-                        'artists': artists,
-                        'artist_string': ', '.join(artists),
-                        'imageUrl': track_image_url
+                        'artists_string': ', '.join(artists),
+                        'imageUrl': track_image_url,
+                        'url': track_url
                     })
             
             offset += 100
@@ -329,6 +332,8 @@ def store_spotify_songs_in_database(playlists, user_id):
         for playlist in playlists:
             new_playlist = Playlist(
                 playlistName=playlist['name'],
+                playlistUrl=playlist['url'],
+                playlistImageUrl=playlist['imageUrl'],
                 playlistOwnerId=user_id
             )
             
@@ -340,7 +345,6 @@ def store_spotify_songs_in_database(playlists, user_id):
             for track in playlist['tracks']:
                 existing_song = Track.query.filter_by(
                     trackName=track['name'],
-                    artist=track['artist_string']
                 ).first()
                 
                 if existing_song:
@@ -348,7 +352,8 @@ def store_spotify_songs_in_database(playlists, user_id):
                 else:
                     new_song = Track(
                         trackName=track['name'],
-                        artist=track['artist_string'],
+                        artist=track['artists_string'],
+                        trackUrl=track['url'],
                         imageUrl=track['imageUrl']
                     )
                     db.session.add(new_song)
