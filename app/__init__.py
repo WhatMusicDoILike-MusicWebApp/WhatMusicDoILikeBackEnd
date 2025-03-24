@@ -7,12 +7,12 @@ from flask import Flask
 from flask_cors import CORS
 from app.models.database import db
 
-def create_app():
+def create_app(config_name=None):
     app = Flask(__name__)
 
     CORS(app, origins=["http://localhost:5173"])
 
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db' #mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://test_user:test_password@localhost/backend' #mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)  
@@ -57,10 +57,11 @@ def create_app():
         db.session.add_all(dummy_users)
         db.session.commit()  
 
-    from app.routes import user_bp, gpt_bp, spotify_auth_bp
+    from app.routes import user_bp, gpt_bp, spotify_auth_bp, spotify_search_bp
     app.register_blueprint(gpt_bp)
     app.register_blueprint(spotify_auth_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(spotify_search_bp)
 
     def cleanup():
         with app.app_context():
