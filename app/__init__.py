@@ -41,6 +41,8 @@ def create_app():
             Playlist(playlistName="Iker's Playlist", playlistOwnerId=1, playlistUrl="https://google.com"),
             Track(trackName="Billie Jean", artist="Michael Jackson", trackUrl="https://google.com"),
             PlaylistHas(playlistId=1, trackId=1),
+
+            User(userId= "2", name="Yu Sun", email="YuSun@example.com"),
         ]
 
         db.session.add_all(dummy_data)
