@@ -1,11 +1,10 @@
 import os
-
 from openai import OpenAI
 from app.models.playlist import Playlist
 from app.models.playlist_has import PlaylistHas
 from flask import Blueprint, jsonify, request
 from app.models.database import db
-from app.models.song import Song
+from app.models.track import Track
 from dotenv import load_dotenv
 
 gpt_bp = Blueprint('gpt_bp', __name__)
@@ -26,21 +25,21 @@ def fetch_recommendations():
     if not playlists:
         return jsonify({"error": "No playlists found for this user"}), 404
     
-    song_ids = db.session.query(PlaylistHas.songId).filter(
+    track_ids = db.session.query(PlaylistHas.trackId).filter(
         PlaylistHas.playlistId.in_([p.playlistId for p in playlists])
     ).distinct().all()  
 
-    if not song_ids:
+    if not track_ids:
         return jsonify({"error": "Songs not found in database"}), 404
     
-    songs = db.session.query(Song.trackName, Song.artist).filter(
-        Song.songId.in_([s[0] for s in song_ids])
+    tracks = db.session.query(Track.trackName, Track.artist).filter(
+        Track.trackId.in_([s[0] for s in track_ids])
     ).all()
 
-    if not songs:
+    if not tracks:
         return jsonify({"error": "Songs not found in database"}), 404
 
-    song_text = "\n".join([f"{title} by {artist}" for title, artist in songs])
+    song_text = "\n".join([f"{title} by {artist}" for title, artist in tracks])
 
     prompt = (
         "Based on the following list of songs, suggest 5 new songs that the user might like:\n\n" +
@@ -73,25 +72,25 @@ def fetch_genres():
     if not playlists:
         return jsonify({"error": "No playlists found for this user"}), 404
     
-    song_ids = db.session.query(PlaylistHas.songId).filter(
+    track_ids = db.session.query(PlaylistHas.trackId).filter(
         PlaylistHas.playlistId.in_([p.playlistId for p in playlists])
     ).distinct().all()  
 
-    if not song_ids:
+    if not track_ids:
         return jsonify({"error": "Songs not found in database"}), 404
     
-    songs = db.session.query(Song.trackName, Song.artist).filter(
-        Song.songId.in_([s[0] for s in song_ids])
+    tracks = db.session.query(Track.trackName, Track.artist).filter(
+        Track.trackId.in_([s[0] for s in track_ids])
     ).all()
 
-    if not songs:
+    if not tracks:
         return jsonify({"error": "Songs not found in database"}), 404
 
-    song_text = "\n".join([f"{title} by {artist}" for title, artist in songs])
+    track_text = "\n".join([f"{title} by {artist}" for title, artist in tracks])
 
     prompt = (
         "Based on the following list of songs, give me my top 5 genres.\n\n" +
-        song_text +
+        track_text +
         "\n\nProvide the recommendations in JSON format with fields: 'Genre' and 'exaplaination for genre'."
     )
 

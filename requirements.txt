@@ -1,0 +1,6 @@
+openai
+flask_sqlalchemy
+flask
+flask_cors
+dotenv
+pymysql
