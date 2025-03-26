@@ -30,34 +30,32 @@ def create_app():
         dummy_users = [
             User(userId= "1", name="Iker", email="Iker@example.com", spotifyId="sp_123", youtubeId="yt_123", appleMusicId="am_123"),
             User(userId= "2", name="Maayan", email="Maayan@example.com"),
-            User(userId= "3", name="Caleb", email="Caleb@example.com:"),
+            User(userId= "user_2uVeE9I6JLWiQEl8wO22lZ8orUU", name="Caleb", email="Caleb@example.com:"),
             User(userId= "4", name="Ethan", email="Ethan@exampel.com"),
 
-            Playlist(playlistName="Iker's Playlist", playlistOwnerId=1),
-            Playlist(playlistName="Maayan's Playlist", playlistOwnerId=2),
-            Playlist(playlistName="Caleb's Playlist", playlistOwnerId=3),
-            Playlist(playlistName="Ethan's Playlist", playlistOwnerId=4),
+            # Playlist(playlistName="Iker's Playlist", playlistOwnerId=1),
+            # Playlist(playlistName="Maayan's Playlist", playlistOwnerId=2),
+            # Playlist(playlistName="Ethan's Playlist", playlistOwnerId=4),
 
-            Song(trackName="Billie Jean", artist="Michael Jackson"),
-            Song(trackName="Stayin' Alive", artist="Bee Gees"),
-            Song(trackName="Song 3", artist="Artist 3"),
-            Song(trackName="Song 4", artist="Artist 4"),
-            Song(trackName="You'll Never Walk Alone", artist="Gerry & The Pacemakers"),
-            Song(trackName="Hey Jude", artist="The Beatles"),
-            Song(trackName="Sunflower", artist="Post Malone, Swae Lee"),
+            # Song(trackName="Billie Jean", artist="Michael Jackson"),
+            # Song(trackName="Stayin' Alive", artist="Bee Gees"),
+            # Song(trackName="Song 3", artist="Artist 3"),
+            # Song(trackName="Song 4", artist="Artist 4"),
+            # Song(trackName="You'll Never Walk Alone", artist="Gerry & The Pacemakers"),
+            # Song(trackName="Hey Jude", artist="The Beatles"),
+            # Song(trackName="Sunflower", artist="Post Malone, Swae Lee"),
 
 
-            PlaylistHas(playlistId=1, songId=1),
-            PlaylistHas(playlistId=1, songId=2),
-            PlaylistHas(playlistId=1, songId=5),
-            PlaylistHas(playlistId=1, songId=6),
-            PlaylistHas(playlistId=1, songId=7),
+            # PlaylistHas(playlistId=1, songId=1),
+            # PlaylistHas(playlistId=1, songId=2),
+            # PlaylistHas(playlistId=1, songId=5),
+            # PlaylistHas(playlistId=1, songId=6),
+            # PlaylistHas(playlistId=1, songId=7),
 
-            PlaylistHas(playlistId=2, songId=3),
-            PlaylistHas(playlistId=2, songId=1),
-            PlaylistHas(playlistId=3, songId=4),
-            PlaylistHas(playlistId=4, songId=2),
-            PlaylistHas(playlistId=4, songId=3)
+            # PlaylistHas(playlistId=2, songId=3),
+            # PlaylistHas(playlistId=2, songId=1),
+            # PlaylistHas(playlistId=4, songId=2),
+            # PlaylistHas(playlistId=4, songId=3)
         ]
 
         db.session.add_all(dummy_users)
