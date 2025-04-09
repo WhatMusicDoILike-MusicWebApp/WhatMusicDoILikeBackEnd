@@ -19,10 +19,11 @@ def create_app():
     load_dotenv('.env')
     dev_mode = os.environ.get('DEVELOPEMENT_MODE')
 
+    app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
     if dev_mode == 'True':
         CORS(app, origins=['http://localhost:5173'])
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db'
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:777@localhost/postgres'
     else:
         main_branch = 'https://www.whatmusicdoilike.com'
         dev_branch = 'https://www.dev.whatmusicdoilike.com'
