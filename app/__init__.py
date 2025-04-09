@@ -6,14 +6,19 @@ from app.models.user import User
 from flask import Flask
 from flask_cors import CORS
 from app.models.database import db
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
+
+
+load_dotenv()
+
 
 def create_app():
     app = Flask(__name__)
     
     load_dotenv('.env')
     dev_mode = os.environ.get('DEVELOPEMENT_MODE')
+
 
     if dev_mode == 'True':
         CORS(app, origins=['http://localhost:5173'])
@@ -48,10 +53,11 @@ def create_app():
         db.session.add_all(dummy_data)
         db.session.commit()  
 
-    from app.routes import user_bp, gpt_bp, spotify_auth_bp, playlist_bp
+    from app.routes import user_bp, gpt_bp, spotify_auth_bp, youtube_auth_bp, playlist_bp
     app.register_blueprint(gpt_bp)
     app.register_blueprint(spotify_auth_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(youtube_auth_bp)
     app.register_blueprint(playlist_bp)
 
     def cleanup():
