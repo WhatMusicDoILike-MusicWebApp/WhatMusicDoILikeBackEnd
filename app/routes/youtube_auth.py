@@ -70,6 +70,8 @@ RefreshingToken.prompt_for_token = classmethod(patched_prompt_for_token)
 def store_yt_songs_in_db(playlists, user_id):
     "Stores playlist and songs in db"
     user = User.query.filter_by(userId=user_id).first()
+
+    playlist_results = []
     if not user:
             print(f"User with ID {user_id} does not exist")
             return False
@@ -86,6 +88,14 @@ def store_yt_songs_in_db(playlists, user_id):
         db.session.flush()  
 
         playlist_id = new_playlist.playlistId
+
+        playlist_data = {
+            'id': playlist_id,
+            'name': playlist['title'],
+            'imageUrl': playlist['thumbnails'][-1]['url'],
+            'url': f'https://music.youtube.com/playlist?list={playlist["id"]}',
+            'tracks': []
+        }
 
         for track in playlist['tracks']: 
             existing_song = Track.query.filter_by(
@@ -117,9 +127,20 @@ def store_yt_songs_in_db(playlists, user_id):
                     trackId=song_id
                 )
                 db.session.add(playlist_has)
-        
+
+            playlist_data['tracks'].append({
+                'name': track['title'],
+                'imageUrl': track['thumbnails'][-1]['url'],
+                'url': f"https://music.youtube.com/watch?v={track['videoId']}",
+                'artist': track['artists'][0]['name']
+            })
+
+        if(playlist['trackCount'] > 0):
+            playlist_results.append(playlist_data)
+
         db.session.commit()
-    return True
+        
+    return playlist_results
 
 
         
@@ -153,9 +174,9 @@ def yt_login():
         list_of_playlist.append(ytmusic.get_playlist(playlist["playlistId"]))
             
     result = store_yt_songs_in_db(list_of_playlist, clerk_unique_id)
-
-    if result:
-        return jsonify({"message": "Songs stored successfully"}), 200
+    
+    if result is not None:
+        return result, 200
     else:
         return jsonify({"message": "Error storing songs"}), 400
 
