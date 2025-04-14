@@ -91,7 +91,7 @@ def store_yt_songs_in_db(playlists, user_id):
 
         playlist_data = {
             'id': playlist_id,
-            'name': playlist['title'],
+            'playlistName': playlist['title'],
             'imageUrl': playlist['thumbnails'][-1]['url'],
             'url': f'https://music.youtube.com/playlist?list={playlist["id"]}',
             'tracks': []
