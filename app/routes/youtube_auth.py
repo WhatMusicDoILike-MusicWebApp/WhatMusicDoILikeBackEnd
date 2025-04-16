@@ -69,78 +69,63 @@ RefreshingToken.prompt_for_token = classmethod(patched_prompt_for_token)
 
 def store_yt_songs_in_db(playlists, user_id):
     "Stores playlist and songs in db"
-    user = User.query.filter_by(userId=user_id).first()
+    user = User.query.filter_by(userId='1').first()
 
-    playlist_results = []
-    if not user:
+    try:
+        if not user:
             print(f"User with ID {user_id} does not exist")
             return False
     
-    for playlist in playlists:
-        new_playlist = Playlist(
-                playlistName=playlist['title'],
-                playlistOwnerId=user.userId,
-                playlistImageUrl=playlist['thumbnails'][-1]['url'],
-                playlistUrl = f'https://music.youtube.com/playlist?list={playlist["id"]}'
-        )
+        for playlist in playlists:
+            new_playlist = Playlist(
+                    playlistName=playlist['title'],
+                    playlistOwnerId=user.userId,
+                    playlistImageUrl=playlist['thumbnails'][-1]['url'],
+                    playlistUrl = f'https://music.youtube.com/playlist?list={playlist["id"]}',
+                    isYt=True
+            )
 
-        db.session.add(new_playlist)
-        db.session.flush()  
+            db.session.add(new_playlist)
+            db.session.flush()  
 
-        playlist_id = new_playlist.playlistId
+            playlist_id = new_playlist.playlistId
 
-        playlist_data = {
-            'id': playlist_id,
-            'playlistName': playlist['title'],
-            'imageUrl': playlist['thumbnails'][-1]['url'],
-            'url': f'https://music.youtube.com/playlist?list={playlist["id"]}',
-            'tracks': []
-        }
-
-        for track in playlist['tracks']: 
-            existing_song = Track.query.filter_by(
-                trackName=track['title'],
-                artist=track['artists'][0]['name']
-            ).first()
-            
-            if existing_song:
-                song_id = existing_song.trackId
-            else:
-                new_song = Track(
+            for track in playlist['tracks']: 
+                existing_song = Track.query.filter_by(
                     trackName=track['title'],
-                    artist=track['artists'][0]['name'],
-                    imageUrl=track['thumbnails'][-1]['url'],
-                    trackUrl=f"https://music.youtube.com/watch?v={track['videoId']}"
-                )
-                db.session.add(new_song)
-                db.session.flush()  # Get the ID without committing
-                song_id = new_song.trackId
-            
-            exists = PlaylistHas.query.filter_by(
-                playlistId=playlist_id, 
-                trackId=song_id
-            ).first()
-            
-            if not exists:
-                playlist_has = PlaylistHas(
+                    artist=track['artists'][0]['name']
+                ).first()
+                
+                if existing_song:
+                    song_id = existing_song.trackId
+                else:
+                    new_song = Track(
+                        trackName=track['title'],
+                        artist=track['artists'][0]['name'],
+                        imageUrl=track['thumbnails'][-1]['url'],
+                        trackUrl=f"https://music.youtube.com/watch?v={track['videoId']}"
+                    )
+                    db.session.add(new_song)
+                    db.session.flush()  # Get the ID without committing
+                    song_id = new_song.trackId
+                
+                exists = PlaylistHas.query.filter_by(
                     playlistId=playlist_id, 
                     trackId=song_id
-                )
-                db.session.add(playlist_has)
+                ).first()
+                
+                if not exists:
+                    playlist_has = PlaylistHas(
+                        playlistId=playlist_id, 
+                        trackId=song_id
+                    )
+                    db.session.add(playlist_has)
 
-            playlist_data['tracks'].append({
-                'name': track['title'],
-                'imageUrl': track['thumbnails'][-1]['url'],
-                'url': f"https://music.youtube.com/watch?v={track['videoId']}",
-                'artist': track['artists'][0]['name']
-            })
-
-        if(playlist['trackCount'] > 0):
-            playlist_results.append(playlist_data)
-
-        db.session.commit()
-        
-    return playlist_results
+            db.session.commit()
+        return True
+    except Exception as e:
+        print(f"Error fetching playlists: {e}")
+        return False
 
 
         
@@ -159,7 +144,7 @@ def yt_login():
         session["oauth_token"] = token  
         session.modified = True  
 
-    clerk_unique_id = request_data['userId']
+    clerk_unique_id = '1'
         
     ytmusic = YTMusic(session["oauth_token"].as_dict(), oauth_credentials=OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET))  # Initialize with stored token
     currentUser = User.query.filter_by(userId=clerk_unique_id).first()
@@ -175,10 +160,57 @@ def yt_login():
             
     result = store_yt_songs_in_db(list_of_playlist, clerk_unique_id)
     
-    if result is not None:
-        return result, 200
+    if result is True:
+        return jsonify({"message": "Stored Successfully"}), 200
     else:
         return jsonify({"message": "Error storing songs"}), 400
+    
+
+@youtube_auth_bp.route("/youtube/yt_fetch_data", methods=['GET'])
+def fetch_yt_info():
+    user_id = request.args.get('userId')
+
+    currentUser = User.query.filter_by(userId='1').first()
+
+
+    ytmusic = YTMusic(currentUser.youtubeId, oauth_credentials=OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET))  
+
+    playlists_yt = ytmusic.get_library_playlists()
+
+    list_of_playlists = []
+
+    for playlist in playlists_yt:
+        list_of_playlists.append(ytmusic.get_playlist(playlist["playlistId"]))
+            
+
+    
+    playlist_results = []
+
+    for playlist in list_of_playlists:
+
+
+        playlist_data = {
+            'playlistName': playlist['title'],
+            'imageUrl': playlist['thumbnails'][-1]['url'],
+            'url': f'https://music.youtube.com/playlist?list={playlist["id"]}',
+            'tracks': []
+        }
+
+
+        for track in playlist['tracks']:
+            
+            playlist_data['tracks'].append({
+                'name': track['title'],
+                'imageUrl': track['thumbnails'][-1]['url'],
+                'url': f"https://music.youtube.com/watch?v={track['videoId']}",
+                'artist': track['artists'][0]['name']
+            })
+
+        if(playlist['trackCount'] > 0):
+            playlist_results.append(playlist_data)
+
+        
+    return playlist_results
 
 
 @youtube_auth_bp.route("/youtube/yt_create_playlist", methods=['POST'])
