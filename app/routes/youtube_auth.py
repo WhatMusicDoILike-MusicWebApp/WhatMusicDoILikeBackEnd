@@ -69,7 +69,7 @@ RefreshingToken.prompt_for_token = classmethod(patched_prompt_for_token)
 
 def store_yt_songs_in_db(playlists, user_id):
     "Stores playlist and songs in db"
-    user = User.query.filter_by(userId='1').first()
+    user = User.query.filter_by(userId=user_id).first()
 
     try:
         if not user:
@@ -144,7 +144,7 @@ def yt_login():
         session["oauth_token"] = token  
         session.modified = True  
 
-    clerk_unique_id = '1'
+    clerk_unique_id = request_data['userId']
         
     ytmusic = YTMusic(session["oauth_token"].as_dict(), oauth_credentials=OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET))  # Initialize with stored token
     currentUser = User.query.filter_by(userId=clerk_unique_id).first()
@@ -170,7 +170,7 @@ def yt_login():
 def fetch_yt_info():
     user_id = request.args.get('userId')
 
-    currentUser = User.query.filter_by(userId='1').first()
+    currentUser = User.query.filter_by(userId=user_id).first()
 
 
     ytmusic = YTMusic(currentUser.youtubeId, oauth_credentials=OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET))  
