@@ -12,7 +12,7 @@ gpt_bp = Blueprint('gpt_bp', __name__)
 load_dotenv()
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY")) 
 
-@gpt_bp.route('/fetchRecommendations', methods=['GET'])
+@gpt_bp.route('/fetchRecommendations', methods=['POST'])
 def fetch_recommendations():
     data = request.get_json() 
     user_id = data.get('userId')
@@ -54,12 +54,13 @@ def fetch_recommendations():
         )
 
         recommendations = response.choices[0].message.content
+        print(recommendations)
         return jsonify({"recommendations": recommendations}), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
-@gpt_bp.route('/fetchGenres', methods=['GET'])
+@gpt_bp.route('/fetchGenres', methods=['POST'])
 def fetch_genres():
     data = request.get_json()  
     user_id = data.get('userId')
@@ -101,6 +102,7 @@ def fetch_genres():
         )
 
         recommendations = response.choices[0].message.content
+        print(recommendations)
         return jsonify({"recommendations": recommendations}), 200
 
     except Exception as e:

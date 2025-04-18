@@ -8,6 +8,7 @@ class Playlist(db.Model):
     playlistUrl = db.Column(db.String(255), nullable=False)
     playlistImageUrl = db.Column(db.String(255), nullable=True)
     playlistOwnerId = db.Column(db.String(255), db.ForeignKey('users.userId'), nullable=False)
+    isYt = db.Column(db.Boolean, nullable=True)
     
     user = db.relationship('User', back_populates='playlists')
     tracks = db.relationship('PlaylistHas', back_populates='playlist')
