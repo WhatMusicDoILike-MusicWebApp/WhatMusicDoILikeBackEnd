@@ -334,7 +334,8 @@ def store_spotify_songs_in_database(playlists, user_id):
                 playlistName=playlist['name'],
                 playlistUrl=playlist['url'],
                 playlistImageUrl=playlist['imageUrl'],
-                playlistOwnerId=user_id
+                playlistOwnerId=user_id,
+                isYt=False
             )
             
             db.session.add(new_playlist)
