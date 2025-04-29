@@ -218,6 +218,15 @@ def create_yt_playlist():
 
     request_data = request.get_json()
     clerk_unique_id = request_data['userId']
+    selected_playlist_ids = request_data.get('playlistIds', [])
+
+    if not selected_playlist_ids:
+        return {"error": "No playlist IDs provided."}, 400
+
+    currentUser = User.query.filter_by(userId=clerk_unique_id).first()
+    if not currentUser:
+        return {"error": "User not found."}, 404
+
 
     currentUser = User.query.filter_by(userId=clerk_unique_id).first()
 
@@ -225,13 +234,14 @@ def create_yt_playlist():
     ytmusic = YTMusic(currentUser.youtubeId, oauth_credentials=OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET))  
 
 
-    user_playlists = currentUser.playlists
 
     all_video_ids = []
 
-    print(user_playlists)
 
-    for playlist in user_playlists:
+    for playlist in currentUser.playlists:
+        if str(playlist.id) not in selected_playlist_ids:
+            continue
+        
         print(f"Playlist: {playlist.playlistName}")
 
         for playlist_has in playlist.tracks:  
