@@ -5,3 +5,5 @@ flask_cors
 dotenv
 pymysql
 ytmusicapi
+pyautogui
+psycopg2-binary
