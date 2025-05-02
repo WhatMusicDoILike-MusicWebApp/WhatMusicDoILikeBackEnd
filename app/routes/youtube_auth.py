@@ -9,8 +9,6 @@ import webbrowser
 from typing import Optional
 from pathlib import Path
 from dotenv import load_dotenv
-import platform
-import pyautogui
 
 from app.models.playlist import Playlist
 from app.models.playlist_has import PlaylistHas
@@ -52,10 +50,6 @@ def patched_prompt_for_token(               #patched ytmusic oauth method for au
                 ref_token.update(ref_token.as_dict())
                 if to_file:
                     ref_token.local_cache = Path(to_file)
-                if platform.system() == "Darwin":  # macOS
-                    pyautogui.hotkey("command", "w")
-                else:  # Windows/Linux
-                    pyautogui.hotkey("ctrl", "w")
 
                 print("Authentication successful. Tab closed.")
                 return ref_token
