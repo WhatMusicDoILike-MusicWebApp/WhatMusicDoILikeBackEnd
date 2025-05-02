@@ -3,7 +3,6 @@ from app.models.playlist_has import PlaylistHas
 from flask import Blueprint, jsonify, request
 from app.models.database import db
 from app.models.user import User
-from dotenv import load_dotenv
 
 user_bp = Blueprint('user_bp', __name__)
 
@@ -15,15 +14,12 @@ def new_user():
     user_id = data.get('userId')
     name = data.get('name')
     email = data.get('email')
-    spotify_id = data.get('spotifyId', "")  
-    youtube_id = data.get('youtubeId', "")
-    apple_music_id = data.get('appleMusicId', "")
 
     if not user_id or not name or not email:
         return jsonify({"error": "Missing required fields"}), 400
 
     try:
-        new_user = User(userId=user_id, name=name, email=email, spotifyId=spotify_id, youtubeId=youtube_id, appleMusicId=apple_music_id)
+        new_user = User(userId=user_id, name=name, email=email, spotifyAuthToken='', spotifyRefreshToken='')
         db.session.add(new_user)  
         db.session.commit()  
 
@@ -47,7 +43,9 @@ def get_user():
     return jsonify({
         "userId": user.userId,
         "name": user.name,
-        "email": user.email
+        "email": user.email,
+        "spotifyAuthToken": user.spotifyAuthToken,
+        "spotifyRefreshToken": user.spotifyRefreshToken
     }), 200
 
 @user_bp.route('/users', methods=['DELETE'])

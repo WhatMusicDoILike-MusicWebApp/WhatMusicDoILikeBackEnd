@@ -5,7 +5,10 @@ class Playlist(db.Model):
     
     playlistId = db.Column(db.Integer, primary_key=True, autoincrement=True)
     playlistName = db.Column(db.String(255), nullable=False)
+    playlistUrl = db.Column(db.String(255), nullable=False)
+    playlistImageUrl = db.Column(db.String(255), nullable=True)
     playlistOwnerId = db.Column(db.String(255), db.ForeignKey('users.userId'), nullable=False)
+    isYt = db.Column(db.Boolean, nullable=True)
     
     user = db.relationship('User', back_populates='playlists')
-    songs = db.relationship('PlaylistHas', back_populates='playlist')
+    tracks = db.relationship('PlaylistHas', back_populates='playlist')
