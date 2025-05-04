@@ -10,6 +10,7 @@ import time
 load_dotenv('.env')
 CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
 CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
+DEV_MODE = os.environ.get('DEVELOPEMENT_MODE')
 
 print(f"CLIENT_ID: {CLIENT_ID}")
 print(f"CLIENT_SECRET: {CLIENT_SECRET}")
@@ -38,7 +39,8 @@ def initialize_spotify_connection():
     if user.spotifyAuthToken:
         return jsonify({"error": "User already has a Spotify connection"}), 400
     
-    REDIRECT_URI = 'http://localhost:5173/dashboard'
+    REDIRECT_URI_LOCAL = 'http://localhost:5173/dashboard'
+    REDIRECT_URI = REDIRECT_URI_LOCAL if DEV_MODE=='True' else 'https://www.dev.whatmusicdoilike.com/dashboard'
     AUTH_URL = 'https://accounts.spotify.com/api/token'
     
     query_params = {
