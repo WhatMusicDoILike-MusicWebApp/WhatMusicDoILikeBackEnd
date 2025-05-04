@@ -58,6 +58,7 @@ def initialize_spotify_connection():
     try:
         response = requests.post(AUTH_URL, params=query_params, headers=headers)
         if 'error' in response.json() or 'access_token' not in response.json():
+            print(f"Error connecting to Spotify: {response.json()}")
             return jsonify({"error": response.json()['error']}), 400
         user.spotifyAuthToken = response.json().get('access_token')
         user.spotifyRefreshToken = response.json().get('refresh_token')
