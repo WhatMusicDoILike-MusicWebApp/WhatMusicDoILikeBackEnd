@@ -11,6 +11,8 @@ load_dotenv('.env')
 CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
 CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
 
+print(f"CLIENT_ID: {CLIENT_ID}")
+print(f"CLIENT_SECRET: {CLIENT_SECRET}")
 MAX_RETRIES = 3
 RETRY_DELAY = 1
 
@@ -22,19 +24,19 @@ def initialize_spotify_connection():
     request_data = request.get_json()
 
     if 'code' not in request_data:
-        return jsonify({"error": "No authorization code provided"})
+        return jsonify({"error": "No authorization code provided"}), 400
     
     if 'userId' not in request_data:
-        return jsonify({"error": "No user ID provided"})
+        return jsonify({"error": "No user ID provided"}), 400
     
     user_id = request_data['userId']
     
     user = User.query.filter_by(userId=user_id).first()
     if not user:
-        return jsonify({"error": "User not found"})
+        return jsonify({"error": "User not found"}), 404
     
     if user.spotifyAuthToken:
-        return jsonify({"error": "User already has a Spotify connection"})
+        return jsonify({"error": "User already has a Spotify connection"}), 400
     
     REDIRECT_URI = 'http://localhost:5173/dashboard'
     AUTH_URL = 'https://accounts.spotify.com/api/token'
@@ -56,7 +58,7 @@ def initialize_spotify_connection():
     try:
         response = requests.post(AUTH_URL, params=query_params, headers=headers)
         if 'error' in response.json() or 'access_token' not in response.json():
-            return jsonify({"error": response.json()['error']})
+            return jsonify({"error": response.json()['error']}), 400
         user.spotifyAuthToken = response.json().get('access_token')
         user.spotifyRefreshToken = response.json().get('refresh_token')
         db.session.commit()
@@ -67,7 +69,8 @@ def initialize_spotify_connection():
             "spotifyRefreshToken": user.spotifyRefreshToken,
         }), 200
     except Exception as e:
-        return jsonify({"error": str(e)})
+        print(f"Error during Spotify connection: {e}")
+        return jsonify({"error": str(e)}), 500
 
 @spotify_auth_bp.route('/spotify/fetchUserData', methods=['GET'])
 def fetch_spotify_user_data():
