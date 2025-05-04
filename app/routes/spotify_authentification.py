@@ -40,7 +40,7 @@ def initialize_spotify_connection():
         return jsonify({"error": "User already has a Spotify connection"}), 400
     
     REDIRECT_URI_LOCAL = 'http://localhost:5173/dashboard'
-    REDIRECT_URI = REDIRECT_URI_LOCAL if DEV_MODE=='True' else 'https://www.dev.whatmusicdoilike.com/dashboard'
+    REDIRECT_URI = REDIRECT_URI_LOCAL if DEV_MODE=='True' else 'https://www.whatmusicdoilike.com/dashboard'
     AUTH_URL = 'https://accounts.spotify.com/api/token'
     
     query_params = {
