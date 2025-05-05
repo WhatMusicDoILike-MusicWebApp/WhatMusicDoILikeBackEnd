@@ -380,3 +380,4 @@ def store_spotify_songs_in_database(playlists, user_id):
         db.session.rollback()
         print(f"Database error: {e}")
         return False
+    
