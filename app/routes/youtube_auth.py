@@ -1,4 +1,5 @@
 import os
+import uuid
 from flask import Blueprint, request, jsonify, session
 from app.models.database import db
 import time
@@ -24,41 +25,43 @@ YT_SECRET = os.getenv("YT_SECRET")
 
 youtube_auth_bp = Blueprint('youtube_auth_bp', __name__)
 
-def patched_prompt_for_token(               #patched ytmusic oauth method for automated authnetication 
-    cls, credentials: Credentials, open_browser: bool = False, to_file: Optional[str] = None
-) -> "RefreshingToken":
-    """
-    Method for CLI token creation via user inputs.
+pending_auth = {}  
 
-    :param credentials: Client credentials
-    :param open_browser: Optional. Open browser to OAuth consent url automatically. (Default: ``False``).
-    :param to_file: Optional. Path to store/sync json version of resulting token. (Default: ``None``).
-    """
+# def patched_prompt_for_token(               #patched ytmusic oauth method for automated authnetication 
+#     cls, credentials: Credentials, open_browser: bool = False, to_file: Optional[str] = None
+# ) -> "RefreshingToken":
+#     """
+#     Method for CLI token creation via user inputs.
 
-    code = credentials.get_code()   
-    url = f"{code['verification_url']}?user_code={code['user_code']}"
-    if open_browser:
-        webbrowser.open(url)
+#     :param credentials: Client credentials
+#     :param open_browser: Optional. Open browser to OAuth consent url automatically. (Default: ``False``).
+#     :param to_file: Optional. Path to store/sync json version of resulting token. (Default: ``None``).
+#     """
 
-    print(f"Go to {url}, finish the login flow. Waiting for authentication...")
+#     code = credentials.get_code()   
+#     url = f"{code['verification_url']}?user_code={code['user_code']}"
+#     if open_browser:
+#         webbrowser.open(url)
 
-    while True:
-        try:
-            raw_token = credentials.token_from_code(code["device_code"])
-            if raw_token:  # Authentication successful
-                ref_token = cls(credentials=credentials, **raw_token)
-                ref_token.update(ref_token.as_dict())
-                if to_file:
-                    ref_token.local_cache = Path(to_file)
+#     print(f"Go to {url}, finish the login flow. Waiting for authentication...")
 
-                print("Authentication successful. Tab closed.")
-                return ref_token
-        except Exception as e:
-            print(f"Waiting for authentication... ({str(e)})")
+#     while True:
+#         try:
+#             raw_token = credentials.token_from_code(code["device_code"])
+#             if raw_token:  # Authentication successful
+#                 ref_token = cls(credentials=credentials, **raw_token)
+#                 ref_token.update(ref_token.as_dict())
+#                 if to_file:
+#                     ref_token.local_cache = Path(to_file)
+
+#                 print("Authentication successful. Tab closed.")
+#                 return ref_token
+#         except Exception as e:
+#             print(f"Waiting for authentication... ({str(e)})")
         
-        time.sleep(0.1)  # Wait before retrying
+#         time.sleep(0.1)  # Wait before retrying
 
-RefreshingToken.prompt_for_token = classmethod(patched_prompt_for_token)
+# RefreshingToken.prompt_for_token = classmethod(patched_prompt_for_token)
 
 
 def store_yt_songs_in_db(playlists, user_id):
@@ -121,43 +124,101 @@ def store_yt_songs_in_db(playlists, user_id):
         print(f"Error fetching playlists: {e}")
         return False
 
+@youtube_auth_bp.route("/youtube/yt_auth/init", methods=["POST"])
+def start_yt_auth():
+    credentials = OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET)
+    code = credentials.get_code()
 
+    session_id = str(uuid.uuid4())
+    pending_auth[session_id] = {
+        "credentials": credentials,
+        "device_code": code["device_code"],
+        "userId": request.get_json().get("userId")  # optional if needed later
+    }
+
+    url = f"{code['verification_url']}?user_code={code['user_code']}"
+
+    return jsonify({
+        "auth_url": url,
+        "session_id": session_id
+    })
+
+@youtube_auth_bp.route("/youtube/yt_auth/poll/<session_id>", methods=["GET"])
+def poll_yt_auth(session_id):
+    auth_data = pending_auth.get(session_id)
+    if not auth_data:
+        return jsonify({"status": "invalid session"}), 404
+
+    credentials = auth_data["credentials"]
+    device_code = auth_data["device_code"]
+    clerk_unique_id = auth_data.get("userId")
+
+    try:
+        raw_token = credentials.token_from_code(device_code)
+        if raw_token:
+            ref_token = RefreshingToken(credentials=credentials, **raw_token)
+            ref_token.update(ref_token.as_dict())
+
+            # Store in session
+            session["oauth_token"] = ref_token
+            session.modified = True
+
+            # Save user data to DB
+            ytmusic = YTMusic(ref_token.as_dict(), oauth_credentials=credentials)
+            currentUser = User.query.filter_by(userId=clerk_unique_id).first()
+            currentUser.youtubeId = ref_token.as_dict()
+            db.session.commit()
+
+            # Fetch and store playlists
+            playlists = ytmusic.get_library_playlists()
+            list_of_playlist = [ytmusic.get_playlist(p["playlistId"]) for p in playlists]
+            result = store_yt_songs_in_db(list_of_playlist, clerk_unique_id)
+
+            # Clean up
+            del pending_auth[session_id]
+
+            if result:
+                return jsonify({"status": "authenticated", "message": "Stored Successfully"}), 200
+            else:
+                return jsonify({"status": "error", "message": "Error storing songs"}), 400
+
+    except Exception as e:
+        return jsonify({"status": "waiting", "message": str(e)}), 202
+
+
+# @youtube_auth_bp.route("/youtube/yt_auth", methods=['POST'])
+# def yt_login():
+#     request_data = request.get_json()
+#     token = setup_oauth(
+#         client_id=YT_CLIENT_ID,
+#         client_secret=YT_SECRET,
+#         open_browser=True  
+#     )
+
+#     if token:
+#         session["oauth_token"] = token  
+#         session.modified = True  
+
+#     clerk_unique_id = request_data['userId']
         
+#     ytmusic = YTMusic(session["oauth_token"].as_dict(), oauth_credentials=OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET))  # Initialize with stored token
+#     currentUser = User.query.filter_by(userId=clerk_unique_id).first()
+#     currentUser.youtubeId = session["oauth_token"].as_dict()
+#     db.session.commit()
 
+#     playlists = ytmusic.get_library_playlists()  # Fetch user's playlists
 
-@youtube_auth_bp.route("/youtube/yt_auth", methods=['POST'])
-def yt_login():
-    request_data = request.get_json()
-    token = setup_oauth(
-        client_id=YT_CLIENT_ID,
-        client_secret=YT_SECRET,
-        open_browser=True  
-    )
+#     list_of_playlist = []
 
-    if token:
-        session["oauth_token"] = token  
-        session.modified = True  
-
-    clerk_unique_id = request_data['userId']
-        
-    ytmusic = YTMusic(session["oauth_token"].as_dict(), oauth_credentials=OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET))  # Initialize with stored token
-    currentUser = User.query.filter_by(userId=clerk_unique_id).first()
-    currentUser.youtubeId = session["oauth_token"].as_dict()
-    db.session.commit()
-
-    playlists = ytmusic.get_library_playlists()  # Fetch user's playlists
-
-    list_of_playlist = []
-
-    for playlist in playlists:
-        list_of_playlist.append(ytmusic.get_playlist(playlist["playlistId"]))
+#     for playlist in playlists:
+#         list_of_playlist.append(ytmusic.get_playlist(playlist["playlistId"]))
             
-    result = store_yt_songs_in_db(list_of_playlist, clerk_unique_id)
+#     result = store_yt_songs_in_db(list_of_playlist, clerk_unique_id)
     
-    if result is True:
-        return jsonify({"message": "Stored Successfully"}), 200
-    else:
-        return jsonify({"message": "Error storing songs"}), 400
+#     if result is True:
+#         return jsonify({"message": "Stored Successfully"}), 200
+#     else:
+#         return jsonify({"message": "Error storing songs"}), 400
     
 
 @youtube_auth_bp.route("/youtube/yt_fetch_data", methods=['GET'])
