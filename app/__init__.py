@@ -13,17 +13,17 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def create_app(config_name=None):
+def create_app():
     app = Flask(__name__)
     
     load_dotenv('.env')
-    dev_mode = 'True'
+    dev_mode = os.environ.get('DEVELOPEMENT_MODE')
 
     app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
     if dev_mode == 'True':
         CORS(app, origins=['http://localhost:5173'])
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Forcabarca6861@localhost/backend'
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:777@localhost/postgres'
     else:
         main_branch = 'https://www.whatmusicdoilike.com'
         dev_branch = 'https://www.dev.whatmusicdoilike.com'
@@ -54,14 +54,13 @@ def create_app(config_name=None):
         db.session.add_all(dummy_data)
         db.session.commit()  
 
-    from app.routes import user_bp, gpt_bp, spotify_auth_bp, youtube_auth_bp, playlist_bp, spotify_search_bp
-
+    from app.routes import user_bp, gpt_bp, spotify_auth_bp, youtube_auth_bp, playlist_bp, health_checks
+    app.register_blueprint(health_checks)
     app.register_blueprint(gpt_bp)
     app.register_blueprint(spotify_auth_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(youtube_auth_bp)
     app.register_blueprint(playlist_bp)
-    app.register_blueprint(spotify_search_bp)
 
     def cleanup():
         with app.app_context():
