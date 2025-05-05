@@ -3,11 +3,11 @@ import requests
 import base64
 import os
 from dotenv import load_dotenv
-from urllib.parse import urlencode
+from urllib.parse import quote
 from app.models.database import db
 from app.models.playlist import Playlist
 from app.models.user import User
-from app.models.song import Song
+from app.models.track import Track
 from app.models.playlist_has import PlaylistHas
 
 load_dotenv('../.env')
@@ -74,7 +74,10 @@ OUTPUT: List:
 def search_spotify(track, artist, access_token):
     """Search for an item (track, artist, album, playlist) on Spotify."""
 
-    query = track + artist
+    query = f"track:{track} artist:{artist}"
+
+    encoded_query = quote(query)
+
     search_type = "track"  
 
     if not query:
@@ -100,14 +103,15 @@ def search_spotify(track, artist, access_token):
         'Authorization': f"Bearer {access_token}"
     }
     
-    response = requests.get(f'https://api.spotify.com/v1/search?q={query}&type={search_type}&limit=3', headers=headers)
+    response = requests.get(f'https://api.spotify.com/v1/search?q={encoded_query}&type={search_type}&limit=3', headers=headers)
     
     if response.status_code != 200:
         return jsonify({"error": "Failed to fetch search results from Spotify", "status_code": response.status_code}), response.status_code
 
-
     name = response.json()['tracks']['items'][0]['name']
     id = response.json()['tracks']['items'][0]['id']
+
+    print(f"{name} {id}")
     return [name, id]
 
 """
@@ -194,7 +198,7 @@ OUTPUT: List:
 """
 def get_playlist_songs(playlist_id):
     # Get all song IDs from the playlist
-    track_ids = db.session.query(PlaylistHas.songId).filter_by(playlistId=playlist_id).all()
+    track_ids = db.session.query(PlaylistHas.trackId).filter_by(playlistId=playlist_id).all()
 
     # Flatten the list of tuples into a list
     track_ids = [track_id[0] for track_id in track_ids]
@@ -213,7 +217,7 @@ OUTPUT: Dictionary:
 def get_track_info(track_ids):
     track_info = {}
     for track_id in track_ids:
-        result = db.session.query(Song.trackName, Song.artist).filter_by(songId=track_id).first()
+        result = db.session.query(Track.trackName, Track.artist).filter_by(trackId=track_id).first()
         track_info[result[0]] = result[1]
     
     return track_info
@@ -227,15 +231,16 @@ spotify_search_bp = Blueprint('spotify_search_bp', __name__)
 # Using the list of trackids, query and get all track names and artists where the row trackid in the set of given track ids
 # Then we have a dictionary of track ids (key) and artists (values) Pass these to the search spotify to get their spotify ids
 # The rest of the transfer playlist functionality is already implemented
-def transfer_playlist(userID, playlistID):
+def transfer_playlist():
     data = request.get_json()  # or just use: data = request.json
     userID = data.get('userID')
     playlistID = data.get('playlistID')
 
     if userID is None or playlistID is None:
         return jsonify({"error": "Missing userID or playlistID"}), 400
-
-    access_token = get_access_token()
+    
+    access_token = db.session.query(User.spotifyAuthToken).filter_by(userId=userID)
+    # refresh_token = db.session.query(User.spotifyRefreshToken).filter_by(userId=userID)
 
     # list of all track ids which belong to source playlist
     lst_track_ids = get_playlist_songs(playlistID)
@@ -248,7 +253,7 @@ def transfer_playlist(userID, playlistID):
 
     new_playlst_id_spotify = create_playlist(playlist_name, access_token)
 
-    new_playlist = Playlist(playlistName=playlist_name, playlistOwnerId=userID)
+    new_playlist = Playlist(playlistName=playlist_name, playlistUrl=new_playlst_id_spotify, playlistOwnerId=userID)
     db.session.add(new_playlist)
     db.session.commit()
 
@@ -261,14 +266,14 @@ def transfer_playlist(userID, playlistID):
         official_name = track_content[0]
         spotify_id = track_content[1]
 
-        song = Song.query.filter_by(trackName=official_name, artist=artist).first()
+        song = Track.query.filter_by(trackName=official_name, artist=artist).first()
 
         if not song:
-            song = Song(trackName=official_name, artist=artist)
+            song = Track(trackName=official_name, artist=artist, trackUrl=spotify_id)
             db.session.add(song)
             db.session.commit()  
         
-        playlist_song = PlaylistHas(songId=song.songId, playlistId=new_playlist_id)
+        playlist_song = PlaylistHas(trackId=song.trackId, playlistId=new_playlist_id)
         db.session.add(playlist_song)
         db.session.commit()
 

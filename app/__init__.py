@@ -17,17 +17,13 @@ def create_app(config_name=None):
     app = Flask(__name__)
     
     load_dotenv('.env')
-    dev_mode = os.environ.get('DEVELOPEMENT_MODE')
+    dev_mode = 'True'
 
     app.secret_key = os.getenv("FLASK_SECRET_KEY")
 
-<<<<<<< HEAD
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://test_user:test_password@localhost/backend' #mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-=======
     if dev_mode == 'True':
         CORS(app, origins=['http://localhost:5173'])
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:777@localhost/postgres'
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:Forcabarca6861@localhost/backend'
     else:
         main_branch = 'https://www.whatmusicdoilike.com'
         dev_branch = 'https://www.dev.whatmusicdoilike.com'
@@ -39,7 +35,6 @@ def create_app(config_name=None):
         db_name = 'music_db'
 
         app.config['SQLALCHEMY_DATABASE_URI'] = f'mysql+pymysql://{db_user}:{db_password}@{db_endpoint}/{db_name}'
->>>>>>> main
 
     db.init_app(app)  
 
@@ -59,20 +54,14 @@ def create_app(config_name=None):
         db.session.add_all(dummy_data)
         db.session.commit()  
 
-<<<<<<< HEAD
-    from app.routes import user_bp, gpt_bp, spotify_auth_bp, spotify_search_bp
-    app.register_blueprint(gpt_bp)
-    app.register_blueprint(spotify_auth_bp)
-    app.register_blueprint(user_bp)
-    app.register_blueprint(spotify_search_bp)
-=======
-    from app.routes import user_bp, gpt_bp, spotify_auth_bp, youtube_auth_bp, playlist_bp
+    from app.routes import user_bp, gpt_bp, spotify_auth_bp, youtube_auth_bp, playlist_bp, spotify_search_bp
+
     app.register_blueprint(gpt_bp)
     app.register_blueprint(spotify_auth_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(youtube_auth_bp)
     app.register_blueprint(playlist_bp)
->>>>>>> main
+    app.register_blueprint(spotify_search_bp)
 
     def cleanup():
         with app.app_context():
