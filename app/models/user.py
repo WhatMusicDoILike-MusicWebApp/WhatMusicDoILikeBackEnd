@@ -10,7 +10,7 @@ class User(db.Model):
     spotifyId = db.Column(db.String(255), unique=True, nullable=True)
     youtubeId = db.Column(JSON, nullable=True)
     appleMusicId = db.Column(db.String(255), unique=True, nullable=True)
-    spotifyAuthToken = db.Column(db.String(319), nullable=True)
-    spotifyRefreshToken = db.Column(db.String(319), nullable=True)
+    spotifyAuthToken = db.Column(db.String(500), nullable=True)
+    spotifyRefreshToken = db.Column(db.String(500), nullable=True)
     
     playlists = db.relationship('Playlist', back_populates='user')
