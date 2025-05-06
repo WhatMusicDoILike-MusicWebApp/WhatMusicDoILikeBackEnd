@@ -1,4 +1,4 @@
-from sqlalchemy import JSON
+from sqlalchemy import JSON, Boolean
 from app.models.database import db
 
 class User(db.Model):
@@ -12,5 +12,7 @@ class User(db.Model):
     appleMusicId = db.Column(db.String(255), unique=True, nullable=True)
     spotifyAuthToken = db.Column(db.String(500), nullable=True)
     spotifyRefreshToken = db.Column(db.String(500), nullable=True)
+    youtubeDeviceCode = db.Column(db.String(255), nullable=True)
+    pendingYoutubeAuth = db.Column(Boolean, default=False)
     
     playlists = db.relationship('Playlist', back_populates='user')
