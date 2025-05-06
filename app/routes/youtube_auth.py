@@ -300,6 +300,11 @@ def create_yt_playlist():
             if search_results:
                 video_id = search_results[0]["videoId"]
                 all_video_ids.append(video_id)
+                existing_entry = db.session.query(PlaylistHas).filter_by(playlistId=playlist.playlistId, trackId=track.trackId).first()
+                if not existing_entry:
+                    new_playlist_has = PlaylistHas(playlistId=playlist.playlistId, trackId=track.trackId)
+                    db.session.add(new_playlist_has)
+                    db.session.commit()
 
     playlist_title = "My New Playlist"
     playlist_description = "A playlist created from my favorite songs"
