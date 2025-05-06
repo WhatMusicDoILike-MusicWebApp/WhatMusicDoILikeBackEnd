@@ -240,6 +240,7 @@ def transfer_playlist():
         return jsonify({"error": "Missing userID or playlistID"}), 400
     
     access_token = db.session.query(User.spotifyAuthToken).filter_by(userId=userID)
+    access_token = access_token[0]
     # refresh_token = db.session.query(User.spotifyRefreshToken).filter_by(userId=userID)
 
     # list of all track ids which belong to source playlist
