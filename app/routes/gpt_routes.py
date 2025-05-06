@@ -44,7 +44,7 @@ def fetch_recommendations():
     prompt = (
         "Based on the following list of songs, suggest 5 new songs that the user might like:\n\n" +
         song_text +
-        "\n\nProvide the recommendations in JSON format with fields: 'title' and 'artist'."
+        "\n\nProvide the recommendations in JSON format with fields: 'title' and 'artist'. With the recommendation array being called recommendations."
     )
 
     try:
@@ -92,7 +92,7 @@ def fetch_genres():
     prompt = (
         "Based on the following list of songs, give me my top 5 genres.\n\n" +
         track_text +
-        "\n\nProvide the recommendations in JSON format with fields: 'Genre' and 'exaplaination for genre'."
+        "\n\nProvide the genres in JSON format with fields: 'genre' and 'explanation'. With the genre array being called topGenres."
     )
 
     try:
