@@ -11,8 +11,8 @@ from app.models.track import Track
 from app.models.playlist_has import PlaylistHas
 
 load_dotenv('../.env')
-CLIENT_ID = os.environ.get('CLIENT_ID')
-CLIENT_SECRET = os.environ.get('CLIENT_SECRET')
+CLIENT_ID = os.environ.get('SPOTIFY_CLIENT_ID')
+CLIENT_SECRET = os.environ.get('SPOTIFY_CLIENT_SECRET')
 REDIRECT_URI = os.environ.get('REDIRECT_URI')
 response_type = 'code'
 show_dialog = 'true'
@@ -122,9 +122,9 @@ INPUTS: playlist_name String: name of source playlist
 OUTPUT: id String: spotify unique id for playlist
 """
 def create_playlist(playlist_name, access_token):
-
+    print(f"{access_token}\n")
     headers = {
-        "Authorization": f"Bearer {access_token}"
+        'Authorization': f"Bearer {access_token}"
     }
 
     response = requests.get("https://api.spotify.com/v1/me", headers=headers)
@@ -240,29 +240,40 @@ def transfer_playlist():
         return jsonify({"error": "Missing userID or playlistID"}), 400
     
     access_token = db.session.query(User.spotifyAuthToken).filter_by(userId=userID)
-    access_token = access_token[0]
+    print(access_token)
+    print("\n")
+    access_token = access_token[0][0]
+    print(access_token)
     # refresh_token = db.session.query(User.spotifyRefreshToken).filter_by(userId=userID)
 
     # list of all track ids which belong to source playlist
+    print("GETTING PLAYLIST SONGS FROM DB\n")
     lst_track_ids = get_playlist_songs(playlistID)
+    print("\n")
     # get the name of the source playlist
     playlist_name = db.session.query(Playlist.playlistName).filter_by(playlistId=playlistID).first()
     playlist_name = playlist_name[0] if playlist_name else "Untitled Playlist"
 
     # dictionary of track names (key) and artists (value)
+    print("GETTING TRACK INFO\n")
     playlist_tracks = get_track_info(lst_track_ids)
+    print("\n")
 
+    print("CREATING PLAYLIST\n")
     new_playlst_id_spotify = create_playlist(playlist_name, access_token)
+    print("\n")
 
     new_playlist = Playlist(playlistName=playlist_name, playlistUrl=new_playlst_id_spotify, playlistOwnerId=userID)
-    db.session.add(new_playlist)
-    db.session.commit()
+    #db.session.add(new_playlist)
+    #db.session.commit()
 
     new_playlist_id = new_playlist.playlistId
 
     for track, artist in playlist_tracks.items():
         # track content = [name, id]
+        print("SEARCHING SPOTIFY\n")
         track_content = search_spotify(track, artist, access_token)
+        print("\n")
 
         official_name = track_content[0]
         spotify_id = track_content[1]
@@ -271,13 +282,15 @@ def transfer_playlist():
 
         if not song:
             song = Track(trackName=official_name, artist=artist, trackUrl=spotify_id)
-            db.session.add(song)
-            db.session.commit()  
+            #db.session.add(song)
+            #db.session.commit()  
         
         playlist_song = PlaylistHas(trackId=song.trackId, playlistId=new_playlist_id)
-        db.session.add(playlist_song)
-        db.session.commit()
+        #db.session.add(playlist_song)
+        #db.session.commit()
 
+        print("ADDING TRACK TO PLAYLIST\n")
         add_track_to_playlist(new_playlst_id_spotify, spotify_id, access_token)
+        print("\n")
     
     return "Playlist Transferred"
