@@ -25,7 +25,6 @@ YT_SECRET = os.getenv("YT_SECRET")
 
 youtube_auth_bp = Blueprint('youtube_auth_bp', __name__)
 
-pending_auth = {}  
 
 # def patched_prompt_for_token(               #patched ytmusic oauth method for automated authnetication 
 #     cls, credentials: Credentials, open_browser: bool = False, to_file: Optional[str] = None
@@ -126,56 +125,50 @@ def store_yt_songs_in_db(playlists, user_id):
 
 @youtube_auth_bp.route("/youtube/yt_auth/init", methods=["POST"])
 def start_yt_auth():
+    request_data = request.get_json()
+    user_id = request_data.get("userId")
+
     credentials = OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET)
     code = credentials.get_code()
 
-    session_id = str(uuid.uuid4())
-    pending_auth[session_id] = {
-        "credentials": credentials,
-        "device_code": code["device_code"],
-        "userId": request.get_json().get("userId")  # optional if needed later
-    }
-
     url = f"{code['verification_url']}?user_code={code['user_code']}"
 
+    user = User.query.filter_by(userId=user_id).first()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    user.pendingYoutubeAuth = True
+    user.youtubeDeviceCode = code["device_code"]
+    db.session.commit()
+
     return jsonify({
-        "auth_url": url,
-        "session_id": session_id
+        "auth_url": url
     })
 
-@youtube_auth_bp.route("/youtube/yt_auth/poll/<session_id>", methods=["GET"])
-def poll_yt_auth(session_id):
-    auth_data = pending_auth.get(session_id)
-    if not auth_data:
-        return jsonify({"status": "invalid session"}), 404
+@youtube_auth_bp.route("/youtube/yt_auth/poll/<user_id>", methods=["GET"])
+def poll_yt_auth(user_id):
+    user = User.query.filter_by(userId=user_id).first()
+    if not user or not user.pendingYoutubeAuth or not user.youtubeDeviceCode:
+        return jsonify({"status": "invalid or expired session"}), 404
 
-    credentials = auth_data["credentials"]
-    device_code = auth_data["device_code"]
-    clerk_unique_id = auth_data.get("userId")
-
+    credentials = OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET)
     try:
-        raw_token = credentials.token_from_code(device_code)
+        raw_token = credentials.token_from_code(user.youtubeDeviceCode)
         if raw_token:
             ref_token = RefreshingToken(credentials=credentials, **raw_token)
             ref_token.update(ref_token.as_dict())
 
-            # Store in session
-            session["oauth_token"] = ref_token
-            session.modified = True
-
-            # Save user data to DB
-            ytmusic = YTMusic(ref_token.as_dict(), oauth_credentials=credentials)
-            currentUser = User.query.filter_by(userId=clerk_unique_id).first()
-            currentUser.youtubeId = ref_token.as_dict()
+            # Store token in DB
+            user.youtubeId = ref_token.as_dict()
+            user.pendingYoutubeAuth = False
+            user.youtubeDeviceCode = None
             db.session.commit()
 
-            # Fetch and store playlists
+            # Fetch playlists
+            ytmusic = YTMusic(ref_token.as_dict(), oauth_credentials=credentials)
             playlists = ytmusic.get_library_playlists()
             list_of_playlist = [ytmusic.get_playlist(p["playlistId"]) for p in playlists]
-            result = store_yt_songs_in_db(list_of_playlist, clerk_unique_id)
-
-            # Clean up
-            del pending_auth[session_id]
+            result = store_yt_songs_in_db(list_of_playlist, user_id)
 
             if result:
                 return jsonify({"status": "authenticated", "message": "Stored Successfully"}), 200
@@ -184,6 +177,7 @@ def poll_yt_auth(session_id):
 
     except Exception as e:
         return jsonify({"status": "waiting", "message": str(e)}), 202
+
 
 
 # @youtube_auth_bp.route("/youtube/yt_auth", methods=['POST'])
