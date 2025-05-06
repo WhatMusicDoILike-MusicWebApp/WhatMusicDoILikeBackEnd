@@ -54,14 +54,23 @@ def create_app():
         db.session.add_all(dummy_data)
         db.session.commit()  
 
+<<<<<<< HEAD
     from app.routes import user_bp, gpt_bp, spotify_auth_bp, youtube_auth_bp, playlist_bp, health_checks, spotify_transfer_bp
     app.register_blueprint(health_checks)
+=======
+    from app.routes import user_bp, gpt_bp, spotify_auth_bp, youtube_auth_bp, playlist_bp, spotify_transfer_bp, health_checks
+
+>>>>>>> 2084688a74a66f450a6e5d744f385d99236b895f
     app.register_blueprint(gpt_bp)
     app.register_blueprint(spotify_auth_bp)
     app.register_blueprint(user_bp)
     app.register_blueprint(youtube_auth_bp)
     app.register_blueprint(playlist_bp)
     app.register_blueprint(spotify_transfer_bp)
+<<<<<<< HEAD
+=======
+    app.register_blueprint(health_checks)
+>>>>>>> 2084688a74a66f450a6e5d744f385d99236b895f
 
     def cleanup():
         with app.app_context():
