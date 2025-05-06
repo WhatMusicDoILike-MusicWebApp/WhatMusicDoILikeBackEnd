@@ -23,7 +23,7 @@ def create_app():
 
     if dev_mode == 'True':
         CORS(app, origins=['http://localhost:5173'])
-        app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:777@localhost/postgres'
+        app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://testMusicUser:testMusicPassword@localhost/music_db'
     else:
         main_branch = 'https://www.whatmusicdoilike.com'
         dev_branch = 'https://www.dev.whatmusicdoilike.com'
