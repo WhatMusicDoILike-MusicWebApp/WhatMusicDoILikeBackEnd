@@ -276,19 +276,13 @@ def create_yt_playlist():
     if not currentUser:
         return {"error": "User not found."}, 404
 
-
-    currentUser = User.query.filter_by(userId=clerk_unique_id).first()
-
-
     ytmusic = YTMusic(currentUser.youtubeId, oauth_credentials=OAuthCredentials(client_id=YT_CLIENT_ID, client_secret=YT_SECRET))  
-
-
 
     all_video_ids = []
 
 
     for playlist in currentUser.playlists:
-        if str(playlist.id) not in selected_playlist_ids:
+        if str(playlist.playlistId) not in selected_playlist_ids:
             continue
         
         print(f"Playlist: {playlist.playlistName}")
