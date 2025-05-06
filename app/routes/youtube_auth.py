@@ -265,6 +265,8 @@ def fetch_yt_info():
 @youtube_auth_bp.route("/youtube/yt_create_playlist", methods=['POST'])
 def create_yt_playlist():
 
+    print("Hi1")
+
     request_data = request.get_json()
     clerk_unique_id = request_data['userId']
     selected_playlist_ids = request_data.get('playlistIds', [])
@@ -281,8 +283,11 @@ def create_yt_playlist():
     all_video_ids = []
 
 
+    print("Hi2")
+
     for playlist in currentUser.playlists:
         if str(playlist.playlistId) not in selected_playlist_ids:
+            print("skipped")
             continue
         
         print(f"Playlist: {playlist.playlistName}")
@@ -299,6 +304,7 @@ def create_yt_playlist():
 
             if search_results:
                 video_id = search_results[0]["videoId"]
+                print(f"Found video: {video_id}")
                 all_video_ids.append(video_id)
                 existing_entry = db.session.query(PlaylistHas).filter_by(playlistId=playlist.playlistId, trackId=track.trackId).first()
                 if not existing_entry:
@@ -306,9 +312,11 @@ def create_yt_playlist():
                     db.session.add(new_playlist_has)
                     db.session.commit()
 
-    playlist_title = "My New Playlist"
+    playlist_title = "My New Playlist Test"
     playlist_description = "A playlist created from my favorite songs"
     privacy_status = "PRIVATE"  
+
+    print(all_video_ids)
 
     new_playlist_response = ytmusic.create_playlist(
         title=playlist_title,
