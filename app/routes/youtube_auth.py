@@ -286,8 +286,8 @@ def create_yt_playlist():
     print("Hi2")
 
     for playlist in currentUser.playlists:
-        if str(playlist.playlistId) not in selected_playlist_ids:
-            print("skipped")
+        if playlist.playlistId not in selected_playlist_ids:
+            print("skipped" + playlist.playlistId)
             continue
         
         print(f"Playlist: {playlist.playlistName}")
