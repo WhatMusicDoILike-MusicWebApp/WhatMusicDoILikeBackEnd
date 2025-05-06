@@ -222,7 +222,7 @@ def get_track_info(track_ids):
     
     return track_info
 
-spotify_transfer_bp = Blueprint('spotify_search_bp', __name__)
+spotify_transfer_bp = Blueprint('spotify_transfer_bp', __name__)
 # Pass userID and playlistID from json request
 @spotify_transfer_bp.route('/spotify/transfer_playlist', methods=['POST'])
 # Need playlistID, then traverse through all songs in the playlist to get name and artist and then send those to spotify search

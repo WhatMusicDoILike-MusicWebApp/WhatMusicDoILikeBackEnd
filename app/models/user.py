@@ -1,4 +1,3 @@
-from sqlalchemy import JSON
 from app.models.database import db
 
 class User(db.Model):
